@@ -10,9 +10,13 @@ import {
     SafeAreaView,
     ScrollView,
     StatusBar,
+    ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme/theme';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase/config';
 
 const RegisterScreen = ({ onLogin }) => {
     const [fullName, setFullName] = useState('');
@@ -22,6 +26,50 @@ const RegisterScreen = ({ onLogin }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleRegister = async () => {
+        if (!fullName || !email || !password || !confirmPassword) {
+            setError('Please fill in all fields');
+            return;
+        }
+        if (password !== confirmPassword) {
+            setError('Passwords do not match');
+            return;
+        }
+        if (!agreeTerms) {
+            setError('Please agree to the Terms of Service');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            // Save additional user info to Firestore
+            await setDoc(doc(db, 'users', user.uid), {
+                fullName,
+                email,
+                role: 'Reporter',
+                department: 'Not assigned', // Default or could be a dropdown later
+                createdAt: new Date().toISOString(),
+            });
+
+            // Note: In App.js we will handle the auth state change to navigate
+            // but for now we can just suggest logging in or automated transition
+            alert('Account created successfully!');
+            onLogin();
+        } catch (err) {
+            console.error(err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -157,9 +205,25 @@ const RegisterScreen = ({ onLogin }) => {
                             </Text>
                         </TouchableOpacity>
 
+                        {/* Error Message */}
+                        {error ? (
+                            <View style={styles.errorWrapper}>
+                                <MaterialIcons name="error" size={16} color="#ef4444" />
+                                <Text style={styles.errorText}>{error}</Text>
+                            </View>
+                        ) : null}
+
                         {/* Register Button */}
-                        <TouchableOpacity style={styles.registerButton}>
-                            <Text style={styles.registerButtonText}>Register</Text>
+                        <TouchableOpacity
+                            style={[styles.registerButton, loading && { opacity: 0.7 }]}
+                            onPress={handleRegister}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color={theme.colors.background} />
+                            ) : (
+                                <Text style={styles.registerButtonText}>Register</Text>
+                            )}
                         </TouchableOpacity>
 
                         {/* Divider */}
@@ -325,6 +389,20 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         letterSpacing: 0.5,
+    },
+    errorWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 16,
+        gap: 8,
+    },
+    errorText: {
+        color: '#ef4444',
+        fontSize: 14,
+        fontWeight: '500',
     },
     dividerWrapper: {
         flexDirection: 'row',

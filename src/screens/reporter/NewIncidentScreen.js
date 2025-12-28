@@ -10,17 +10,54 @@ import {
     StatusBar,
     Image,
     Platform,
+    ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { theme } from '../theme/theme';
+import { theme } from '../../theme/theme';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '../../firebase/config';
+
+import useStore from '../../store/useStore';
+import { FirebaseService } from '../../services/firebaseService';
 
 const NewIncidentScreen = ({ onCancel, onSubmit }) => {
+    const { profile } = useStore();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('');
-    const [department, setDepartment] = useState('');
+    const [department, setDepartment] = useState(profile?.department || '');
     const [office, setOffice] = useState('');
     const [area, setArea] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async () => {
+        if (!title || !description || !category) {
+            alert('Please fill in at least the title, category, and description.');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await FirebaseService.createIncident({
+                title,
+                description,
+                category,
+                department: department || 'Not specified',
+                office: office || 'Not specified',
+                area: area || 'Not specified',
+                reporterId: auth.currentUser?.uid,
+                reporterName: profile?.fullName || 'Unknown Reporter',
+            });
+
+            alert('Incident reported successfully!');
+            onSubmit(); // Trigger navigation/callback
+        } catch (error) {
+            console.error("Error submitting incident:", error);
+            alert('Failed to submit incident. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -61,7 +98,15 @@ const NewIncidentScreen = ({ onCancel, onSubmit }) => {
 
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Category</Text>
-                        <TouchableOpacity style={styles.selector}>
+                        <TouchableOpacity
+                            style={styles.selector}
+                            onPress={() => {
+                                // Simple mock selection for now
+                                const categories = ['Safety', 'Maintenance', 'Security', 'IT Issue'];
+                                const selected = categories[Math.floor(Math.random() * categories.length)];
+                                setCategory(selected);
+                            }}
+                        >
                             <Text style={category ? styles.selectorText : styles.placeholderText}>
                                 {category || 'Select Category'}
                             </Text>
@@ -102,7 +147,14 @@ const NewIncidentScreen = ({ onCancel, onSubmit }) => {
 
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Department</Text>
-                        <TouchableOpacity style={styles.selector}>
+                        <TouchableOpacity
+                            style={styles.selector}
+                            onPress={() => {
+                                const depts = ['Facilities', 'IT', 'Security', 'HR', 'Operations'];
+                                const selected = depts[Math.floor(Math.random() * depts.length)];
+                                setDepartment(selected);
+                            }}
+                        >
                             <Text style={department ? styles.selectorText : styles.placeholderText}>
                                 {department || 'Select Department'}
                             </Text>
@@ -178,11 +230,18 @@ const NewIncidentScreen = ({ onCancel, onSubmit }) => {
             {/* Footer */}
             <View style={styles.footer}>
                 <TouchableOpacity
-                    style={styles.submitBtn}
-                    onPress={onSubmit}
+                    style={[styles.submitBtn, loading && { opacity: 0.7 }]}
+                    onPress={handleSubmit}
+                    disabled={loading}
                 >
-                    <Text style={styles.submitBtnText}>Submit Incident</Text>
-                    <MaterialIcons name="send" size={20} color={theme.colors.black} />
+                    {loading ? (
+                        <ActivityIndicator color={theme.colors.black} />
+                    ) : (
+                        <>
+                            <Text style={styles.submitBtnText}>Submit Incident</Text>
+                            <MaterialIcons name="send" size={20} color={theme.colors.black} />
+                        </>
+                    )}
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

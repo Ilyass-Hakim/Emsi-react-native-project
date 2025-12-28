@@ -11,16 +11,49 @@ import {
     TextInput,
     Switch,
     Platform,
+    ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { theme } from '../theme/theme';
+import { theme } from '../../theme/theme';
+import { doc, getDoc } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
+import { auth, db } from '../../firebase/config';
+import { useEffect } from 'react';
+import useStore from '../../store/useStore';
+import { FirebaseService } from '../../services/firebaseService';
 
-const ProfileScreen = ({ onNavPress, onLogout, onSave }) => {
-    const [fullName, setFullName] = useState('Alex Johnson');
-    const [email, setEmail] = useState('alex.j@company.com');
-    const [department, setDepartment] = useState('Facilities Management');
+const ProfileScreen = ({ onLogout, onNavPress, onSave }) => {
+    const { profile, logout } = useStore();
+    const [loading, setLoading] = useState(false);
     const [pushEnabled, setPushEnabled] = useState(true);
     const [emailAlerts, setEmailAlerts] = useState(false);
+
+    // Form states
+    const [fullName, setFullName] = useState(profile?.fullName || '');
+    const [email, setEmail] = useState(profile?.email || '');
+    const [department, setDepartment] = useState(profile?.department || '');
+    const role = profile?.role || 'Reporter';
+
+    useEffect(() => {
+        if (profile) {
+            setFullName(profile.fullName || '');
+            setEmail(profile.email || '');
+            setDepartment(profile.department || '');
+        }
+    }, [profile]);
+
+    const handleLogout = async () => {
+        setLoading(true);
+        try {
+            await logout();
+            onLogout();
+        } catch (error) {
+            console.error("Logout error:", error);
+            alert("Failed to logout.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -39,12 +72,17 @@ const ProfileScreen = ({ onNavPress, onLogout, onSave }) => {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
+                {loading && (
+                    <View style={styles.loadingOverlay}>
+                        <ActivityIndicator size="large" color={theme.colors.primary} />
+                    </View>
+                )}
                 {/* Profile Header section */}
                 <View style={styles.profileHeader}>
                     <View style={styles.avatarContainer}>
                         <View style={styles.avatarWrapper}>
                             <Image
-                                source={{ uri: 'https://i.pravatar.cc/200?u=alex' }}
+                                source={{ uri: `https://i.pravatar.cc/200?u=${email}` }}
                                 style={styles.avatar}
                             />
                         </View>
@@ -52,10 +90,10 @@ const ProfileScreen = ({ onNavPress, onLogout, onSave }) => {
                             <MaterialIcons name="edit" size={16} color={theme.colors.background} />
                         </TouchableOpacity>
                     </View>
-                    <Text style={styles.userName}>{fullName}</Text>
+                    <Text style={styles.userName}>{fullName || 'Loading...'}</Text>
                     <View style={styles.roleRow}>
                         <View style={styles.roleBadge}>
-                            <Text style={styles.roleBadgeText}>SAFETY OFFICER</Text>
+                            <Text style={styles.roleBadgeText}>{role.toUpperCase()}</Text>
                         </View>
                         <Text style={styles.subRoleText}>Field Reporter</Text>
                     </View>
@@ -93,6 +131,8 @@ const ProfileScreen = ({ onNavPress, onLogout, onSave }) => {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Settings</Text>
                     <View style={styles.card}>
+                        <SettingsLink icon="history" label="Incident History" onPress={() => onNavPress('incident-history')} />
+                        <View style={styles.cardDivider} />
                         <SettingsLink icon="lock" label="Change Password" />
                         <View style={styles.cardDivider} />
                         <SettingsToggle
@@ -122,7 +162,7 @@ const ProfileScreen = ({ onNavPress, onLogout, onSave }) => {
 
                 {/* Logout button */}
                 <View style={styles.section}>
-                    <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
+                    <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
                         <MaterialIcons name="logout" size={20} color="#f87171" style={{ marginRight: 8 }} />
                         <Text style={styles.logoutBtnText}>Log Out</Text>
                     </TouchableOpacity>
@@ -159,8 +199,8 @@ const InfoField = ({ icon, label, value, onChangeText, keyboardType }) => (
     </View>
 );
 
-const SettingsLink = ({ icon, label }) => (
-    <TouchableOpacity style={styles.settingsItem}>
+const SettingsLink = ({ icon, label, onPress }) => (
+    <TouchableOpacity style={styles.settingsItem} onPress={onPress}>
         <View style={styles.settingsLeft}>
             <View style={styles.settingsIconWrapper}>
                 <MaterialIcons name={icon} size={20} color={theme.colors.textMuted} />
@@ -439,6 +479,18 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 1,
         shadowRadius: 5,
+    },
+    loadingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(16, 34, 22, 0.5)',
+        zIndex: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 100,
     },
 });
 

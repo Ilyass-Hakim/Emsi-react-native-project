@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     StyleSheet,
     View,
@@ -7,61 +7,65 @@ import {
     TouchableOpacity,
     SafeAreaView,
     StatusBar,
+    ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { theme } from '../theme/theme';
+import { theme } from '../../theme/theme';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { db, auth } from '../../firebase/config';
+
+import { FirebaseService } from '../../services/firebaseService';
 
 const MyIncidentsScreen = ({ onNavPress, onIncidentPress }) => {
     const [activeFilter, setActiveFilter] = useState('All');
+    const [incidents, setIncidents] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     const filters = ['All', 'Open', 'In Progress', 'Resolved'];
 
-    const incidents = [
-        {
-            id: '4501',
-            title: 'Fire Alarm Malfunction',
-            time: 'Today, 11:45 AM',
-            location: 'Main Building, Floor 2',
-            status: 'Open',
-            icon: 'warning',
-            iconBg: 'rgba(245, 101, 101, 0.1)',
-            iconColor: theme.colors.error,
-            statusColor: theme.colors.blue,
-        },
-        {
-            id: '4489',
-            title: 'Broken Elevator',
-            time: 'Yesterday, 4:15 PM',
-            location: 'West Wing, Lobby',
-            status: 'In Progress',
-            icon: 'elevator',
-            iconBg: 'rgba(246, 173, 85, 0.1)',
-            iconColor: theme.colors.orange,
-            statusColor: theme.colors.orange,
-        },
-        {
-            id: '4492',
-            title: 'Water Leak in Lobby',
-            time: 'Oct 14, 10:30 AM',
-            location: 'Entrance Hall',
-            status: 'Resolved',
-            icon: 'water-drop',
-            iconBg: 'rgba(99, 179, 237, 0.1)',
-            iconColor: theme.colors.blue,
-            statusColor: theme.colors.primary,
-        },
-        {
-            id: '4471',
-            title: 'Wi-Fi Connection Issues',
-            time: 'Oct 12, 9:00 AM',
-            location: 'Conference Room B',
-            status: 'Resolved',
-            icon: 'wifi-off',
-            iconBg: 'rgba(159, 122, 234, 0.1)',
-            iconColor: '#9f7aea',
-            statusColor: theme.colors.primary,
-        },
-    ];
+    useEffect(() => {
+        if (!auth.currentUser) return;
+
+        const unsubscribe = FirebaseService.subscribeToUserIncidents(auth.currentUser.uid, (incidentsData) => {
+            const mappedIncidents = incidentsData.map(data => ({
+                ...data,
+                // Map Firestore data to the UI format
+                time: data.createdAt?.toDate ? data.createdAt.toDate().toLocaleString() : 'Just now',
+                icon: getIconForCategory(data.category),
+                iconBg: 'rgba(255,255,255,0.05)',
+                iconColor: getColorForStatus(data.status),
+                statusColor: getColorForStatus(data.status),
+                location: data.area || data.department || 'Unknown',
+            }));
+            setIncidents(mappedIncidents);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    const getIconForCategory = (category) => {
+        switch (category) {
+            case 'Safety': return 'warning';
+            case 'Maintenance': return 'build';
+            case 'Security': return 'security';
+            case 'IT Issue': return 'computer';
+            default: return 'info';
+        }
+    };
+
+    const getColorForStatus = (status) => {
+        switch (status) {
+            case 'Open': return theme.colors.blue;
+            case 'In Progress': return theme.colors.orange;
+            case 'Resolved': return theme.colors.primary;
+            default: return theme.colors.textMuted;
+        }
+    };
+
+    const filteredIncidents = incidents.filter(incident =>
+        activeFilter === 'All' || incident.status === activeFilter
+    );
 
     return (
         <SafeAreaView style={styles.container}>
@@ -108,44 +112,57 @@ const MyIncidentsScreen = ({ onNavPress, onIncidentPress }) => {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.listContent}
             >
-                {incidents.map((incident) => (
-                    <TouchableOpacity
-                        key={incident.id}
-                        style={styles.incidentCard}
-                        onPress={() => onIncidentPress(incident.id)}
-                    >
-                        <View style={styles.cardTop}>
-                            <View style={styles.cardHeader}>
-                                <View style={[styles.iconWrapper, { backgroundColor: incident.iconBg }]}>
-                                    <MaterialIcons name={incident.icon} size={24} color={incident.iconColor} />
+                {loading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color={theme.colors.primary} />
+                        <Text style={styles.loadingText}>Fetching your incidents...</Text>
+                    </View>
+                ) : filteredIncidents.length > 0 ? (
+                    filteredIncidents.map((incident) => (
+                        <TouchableOpacity
+                            key={incident.id}
+                            style={styles.incidentCard}
+                            onPress={() => onIncidentPress(incident.id)}
+                        >
+                            <View style={styles.cardTop}>
+                                <View style={styles.cardHeader}>
+                                    <View style={[styles.iconWrapper, { backgroundColor: incident.iconBg }]}>
+                                        <MaterialIcons name={incident.icon} size={24} color={incident.iconColor} />
+                                    </View>
+                                    <View style={styles.titleInfo}>
+                                        <Text style={styles.incidentTitle}>{incident.title}</Text>
+                                        <Text style={styles.incidentMeta}>ID: #{incident.id.substring(0, 6)} • {incident.time}</Text>
+                                    </View>
                                 </View>
-                                <View style={styles.titleInfo}>
-                                    <Text style={styles.incidentTitle}>{incident.title}</Text>
-                                    <Text style={styles.incidentMeta}>ID: #{incident.id} • {incident.time}</Text>
-                                </View>
+                                <MaterialIcons name="chevron-right" size={24} color={theme.colors.textMuted} />
                             </View>
-                            <MaterialIcons name="chevron-right" size={24} color={theme.colors.textMuted} />
-                        </View>
 
-                        <View style={styles.cardBottom}>
-                            <View style={styles.locationRow}>
-                                <MaterialIcons name="location-on" size={14} color={theme.colors.textMuted} />
-                                <Text style={styles.locationText}>{incident.location}</Text>
+                            <View style={styles.cardBottom}>
+                                <View style={styles.locationRow}>
+                                    <MaterialIcons name="location-on" size={14} color={theme.colors.textMuted} />
+                                    <Text style={styles.locationText}>{incident.location}</Text>
+                                </View>
+                                <View style={[
+                                    styles.statusBadge,
+                                    { backgroundColor: incident.statusColor + '15' }
+                                ]}>
+                                    {incident.status === 'Resolved' && (
+                                        <MaterialIcons name="check" size={12} color={incident.statusColor} style={{ marginRight: 4 }} />
+                                    )}
+                                    <Text style={[styles.statusText, { color: incident.statusColor }]}>
+                                        {incident.status.toUpperCase()}
+                                    </Text>
+                                </View>
                             </View>
-                            <View style={[
-                                styles.statusBadge,
-                                { backgroundColor: incident.statusColor + '15' }
-                            ]}>
-                                {incident.status === 'Resolved' && (
-                                    <MaterialIcons name="check" size={12} color={incident.statusColor} style={{ marginRight: 4 }} />
-                                )}
-                                <Text style={[styles.statusText, { color: incident.statusColor }]}>
-                                    {incident.status.toUpperCase()}
-                                </Text>
-                            </View>
-                        </View>
-                    </TouchableOpacity>
-                ))}
+                        </TouchableOpacity>
+                    ))
+                ) : (
+                    <View style={styles.emptyState}>
+                        <MaterialIcons name="assignment-late" size={64} color={theme.colors.textMuted} />
+                        <Text style={styles.emptyStateTitle}>No Incidents Found</Text>
+                        <Text style={styles.emptyStateSub}>You haven't reported any incidents with the "{activeFilter}" status yet.</Text>
+                    </View>
+                )}
                 {/* Spacer for FAB */}
                 <View style={{ height: 80 }} />
             </ScrollView>
@@ -381,6 +398,35 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 1,
         shadowRadius: 5,
+    },
+    loadingContainer: {
+        marginTop: 100,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    loadingText: {
+        color: theme.colors.textSecondary,
+        marginTop: 16,
+        fontSize: 14,
+    },
+    emptyState: {
+        marginTop: 100,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 40,
+    },
+    emptyStateTitle: {
+        color: theme.colors.text,
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginTop: 20,
+    },
+    emptyStateSub: {
+        color: theme.colors.textMuted,
+        fontSize: 14,
+        textAlign: 'center',
+        marginTop: 8,
+        lineHeight: 20,
     },
 });
 

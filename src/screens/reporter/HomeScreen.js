@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     StyleSheet,
     View,
@@ -8,11 +8,87 @@ import {
     Image,
     SafeAreaView,
     StatusBar,
+    ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
-import { theme } from '../theme/theme';
+import { theme } from '../../theme/theme';
+import { collection, query, orderBy, limit, onSnapshot, where, getDoc, doc } from 'firebase/firestore';
+import { db, auth } from '../../firebase/config';
+
+import useStore from '../../store/useStore';
 
 const HomeScreen = ({ onReportPress, onNavPress }) => {
+    const { profile } = useStore();
+    const [stats, setStats] = useState({ pending: 0, active: 0, resolved: 0 });
+    const [recentActivity, setRecentActivity] = useState([]);
+
+    const userName = profile?.fullName?.split(' ')[0] || 'User';
+    const userRole = profile?.role || 'Reporter';
+
+    useEffect(() => {
+        if (!auth.currentUser) return;
+
+        // Stats Listener
+        const qStats = query(collection(db, 'incidents'), where('reporterId', '==', auth.currentUser.uid));
+        const unsubscribeStats = onSnapshot(qStats, (snapshot) => {
+            const newStats = { pending: 0, active: 0, resolved: 0 };
+            snapshot.forEach((doc) => {
+                const status = doc.data().status;
+                if (status === 'Open') newStats.pending++;
+                else if (status === 'In Progress') newStats.active++;
+                else if (status === 'Resolved') newStats.resolved++;
+            });
+            setStats(newStats);
+        });
+
+        // Recent Activity Listener
+        const qActivity = query(
+            collection(db, 'incidents'),
+            where('reporterId', '==', auth.currentUser.uid),
+            orderBy('createdAt', 'desc'),
+            limit(5)
+        );
+        const unsubscribeActivity = onSnapshot(qActivity, (snapshot) => {
+            const activities = [];
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                activities.push({
+                    id: doc.id,
+                    ...data,
+                    time: data.createdAt?.toDate ? data.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+                    icon: getIconForCategory(data.category),
+                    iconBg: 'rgba(255,255,255,0.05)',
+                    iconColor: getColorForStatus(data.status),
+                    statusColor: getColorForStatus(data.status),
+                });
+            });
+            setRecentActivity(activities);
+        });
+
+        return () => {
+            unsubscribeStats();
+            unsubscribeActivity();
+        };
+    }, []);
+
+    const getIconForCategory = (category) => {
+        switch (category) {
+            case 'Safety': return 'warning';
+            case 'Maintenance': return 'build';
+            case 'Security': return 'security';
+            case 'IT Issue': return 'computer';
+            default: return 'info';
+        }
+    };
+
+    const getColorForStatus = (status) => {
+        switch (status) {
+            case 'Open': return theme.colors.orange;
+            case 'In Progress': return theme.colors.blue;
+            case 'Resolved': return theme.colors.primary;
+            default: return theme.colors.textMuted;
+        }
+    };
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" />
@@ -22,13 +98,13 @@ const HomeScreen = ({ onReportPress, onNavPress }) => {
                 <View style={styles.userInfo}>
                     <View style={styles.avatarContainer}>
                         <Image
-                            source={{ uri: 'https://i.pravatar.cc/100?u=alex' }}
+                            source={{ uri: `https://i.pravatar.cc/100?u=${auth.currentUser?.email}` }}
                             style={styles.avatar}
                         />
                     </View>
                     <View>
-                        <Text style={styles.greeting}>Good Morning, Alex</Text>
-                        <Text style={styles.role}>Safety Officer</Text>
+                        <Text style={styles.greeting}>Good Morning, {userName}</Text>
+                        <Text style={styles.role}>{userRole}</Text>
                     </View>
                 </View>
                 <TouchableOpacity style={styles.notificationBtn}>
@@ -65,9 +141,9 @@ const HomeScreen = ({ onReportPress, onNavPress }) => {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Overview</Text>
                     <View style={styles.statsRow}>
-                        <StatCard label="PENDING" value="2" color={theme.colors.orange} />
-                        <StatCard label="ACTIVE" value="1" color={theme.colors.blue} />
-                        <StatCard label="DONE" value="5" color={theme.colors.primary} />
+                        <StatCard label="PENDING" value={stats.pending.toString()} color={theme.colors.orange} />
+                        <StatCard label="ACTIVE" value={stats.active.toString()} color={theme.colors.blue} />
+                        <StatCard label="DONE" value={stats.resolved.toString()} color={theme.colors.primary} />
                     </View>
                 </View>
 
@@ -77,7 +153,7 @@ const HomeScreen = ({ onReportPress, onNavPress }) => {
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
                         <QuickChip icon="health-and-safety" label="Safety" color={theme.colors.primary} />
                         <QuickChip icon="dns" label="IT Issue" color={theme.colors.blue} />
-                        <QuickChip icon="build" label="Maintenance" color="#f1c40f" />
+                        <QuickChip icon="history" label="History" color={theme.colors.textSecondary} onPress={() => onNavPress('incident-history')} />
                         <QuickChip icon="lock" label="Security" color={theme.colors.error} />
                     </ScrollView>
                 </View>
@@ -86,38 +162,29 @@ const HomeScreen = ({ onReportPress, onNavPress }) => {
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Recent Activity</Text>
-                        <TouchableOpacity>
+                        <TouchableOpacity onPress={() => onNavPress('my-incidents')}>
                             <Text style={styles.viewAll}>View All</Text>
                         </TouchableOpacity>
                     </View>
 
-                    <ActivityItem
-                        icon="elevator"
-                        title="Broken Elevator - Bldg 4"
-                        time="Today, 10:23 AM"
-                        status="In Progress"
-                        statusColor={theme.colors.blue}
-                        iconBg="rgba(246, 173, 85, 0.1)"
-                        iconColor={theme.colors.orange}
-                    />
-                    <ActivityItem
-                        icon="cleaning-services"
-                        title="Spill in Cafeteria"
-                        time="Today, 08:15 AM"
-                        status="Pending"
-                        statusColor={theme.colors.orange}
-                        iconBg="rgba(241, 196, 15, 0.1)"
-                        iconColor="#f1c40f"
-                    />
-                    <ActivityItem
-                        icon="wifi-off"
-                        title="Wifi Outage L2"
-                        time="Yesterday"
-                        status="Resolved"
-                        statusColor={theme.colors.primary}
-                        iconBg="rgba(245, 101, 101, 0.1)"
-                        iconColor={theme.colors.error}
-                    />
+                    {recentActivity.length > 0 ? (
+                        recentActivity.map((activity) => (
+                            <ActivityItem
+                                key={activity.id}
+                                icon={activity.icon}
+                                title={activity.title}
+                                time={activity.time}
+                                status={activity.status}
+                                statusColor={activity.statusColor}
+                                iconBg={activity.iconBg}
+                                iconColor={activity.iconColor}
+                            />
+                        ))
+                    ) : (
+                        <View style={styles.emptyActivity}>
+                            <Text style={styles.emptyActivityText}>No recent activity</Text>
+                        </View>
+                    )}
                 </View>
             </ScrollView>
 
@@ -159,8 +226,8 @@ const StatCard = ({ label, value, color }) => (
     </View>
 );
 
-const QuickChip = ({ icon, label, color }) => (
-    <TouchableOpacity style={styles.chip}>
+const QuickChip = ({ icon, label, color, onPress }) => (
+    <TouchableOpacity style={styles.chip} onPress={onPress}>
         <MaterialIcons name={icon} size={20} color={color} />
         <Text style={styles.chipLabel}>{label}</Text>
     </TouchableOpacity>
@@ -450,6 +517,16 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '500',
         marginTop: 4,
+    },
+    emptyActivity: {
+        padding: 20,
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.02)',
+        borderRadius: 12,
+    },
+    emptyActivityText: {
+        color: theme.colors.textMuted,
+        fontSize: 14,
     },
 });
 

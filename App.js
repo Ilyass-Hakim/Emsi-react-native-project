@@ -1,18 +1,38 @@
-import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { theme } from './src/theme/theme';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
-import HomeScreen from './src/screens/HomeScreen';
-import MyIncidentsScreen from './src/screens/MyIncidentsScreen';
-import NewIncidentScreen from './src/screens/NewIncidentScreen';
-import IncidentDetailsScreen from './src/screens/IncidentDetailsScreen';
-import ProfileScreen from './src/screens/ProfileScreen';
-import NotificationsScreen from './src/screens/NotificationsScreen';
+import HomeScreen from './src/screens/reporter/HomeScreen';
+import MyIncidentsScreen from './src/screens/reporter/MyIncidentsScreen';
+import NewIncidentScreen from './src/screens/reporter/NewIncidentScreen';
+import IncidentDetailsScreen from './src/screens/reporter/IncidentDetailsScreen';
+import IncidentHistoryScreen from './src/screens/reporter/IncidentHistoryScreen';
+import ProfileScreen from './src/screens/reporter/ProfileScreen';
+import NotificationsScreen from './src/screens/reporter/NotificationsScreen';
+
+import useStore from './src/store/useStore';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('login');
   const [selectedIncidentId, setSelectedIncidentId] = useState(null);
+  const { user, loading, initializeAuth } = useStore();
+
+  useEffect(() => {
+    initializeAuth();
+  }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      if (user) {
+        if (currentScreen === 'login' || currentScreen === 'register') {
+          setCurrentScreen('home');
+        }
+      } else {
+        setCurrentScreen('login');
+      }
+    }
+  }, [user, loading]);
 
   const renderScreen = () => {
     switch (currentScreen) {
@@ -59,6 +79,13 @@ export default function App() {
             onSubmit={() => setCurrentScreen('my-incidents')}
           />
         );
+      case 'incident-history':
+        return (
+          <IncidentHistoryScreen
+            onBack={() => setCurrentScreen('home')}
+            onNavPress={setCurrentScreen}
+          />
+        );
       case 'incident-details':
         return (
           <IncidentDetailsScreen
@@ -87,7 +114,13 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      {renderScreen()}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      ) : (
+        renderScreen()
+      )}
     </View>
   );
 }
@@ -95,6 +128,12 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#102216',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#102216',
   },
 });

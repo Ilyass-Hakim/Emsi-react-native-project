@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
     StyleSheet,
     View,
@@ -8,77 +8,94 @@ import {
     SafeAreaView,
     StatusBar,
     Platform,
+    ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { theme } from '../theme/theme';
+import { theme } from '../../theme/theme';
+import { auth } from '../../firebase/config';
+import { useEffect, useState } from 'react';
+import { FirebaseService } from '../../services/firebaseService';
 
 const NotificationsScreen = ({ onNavPress }) => {
     const [activeFilter, setActiveFilter] = useState('All');
+    const [notifications, setNotifications] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     const filters = [
-        { id: 'All', icon: 'check_circle', label: 'All' },
+        { id: 'All', icon: 'check-circle', label: 'All' },
         { id: 'Unread', icon: 'circle', label: 'Unread' },
         { id: 'Alerts', icon: 'warning', label: 'Alerts' },
         { id: 'Mentions', icon: 'comment', label: 'Mentions' },
     ];
 
-    const notifications = [
-        {
-            id: 1,
-            title: 'Elevator Malfunction - #429',
-            message: 'Technician assigned to your ticket. Estimated arrival time: 10:30 AM.',
-            time: '2m ago',
-            type: 'build',
-            iconColor: '#f87171',
-            iconBg: 'rgba(248, 113, 113, 0.15)',
-            unread: true,
-            group: 'Today'
-        },
-        {
-            id: 2,
-            title: 'Workplace Hazard #199',
-            message: "Admin added a comment: 'Please attach photos of the exposed wiring so we can assess urgency.'",
-            time: '2h ago',
-            type: 'chat-bubble',
-            iconColor: '#60a5fa',
-            iconBg: 'rgba(96, 165, 250, 0.15)',
-            unread: true,
-            group: 'Today'
-        },
-        {
-            id: 3,
-            title: 'Safety Alert: Fire Drill',
-            message: 'Scheduled fire drill completed successfully. No further action required.',
-            time: 'Yesterday',
-            type: 'warning-amber',
-            iconColor: '#fbbf24',
-            iconBg: 'rgba(251, 191, 36, 0.15)',
-            unread: false,
-            group: 'Yesterday'
-        },
-        {
-            id: 4,
-            title: 'Spill Reported #102',
-            message: 'Ticket marked as resolved by cleaning crew.',
-            time: 'Yesterday',
-            type: 'check-circle',
-            iconColor: theme.colors.primary,
-            iconBg: 'rgba(19, 236, 91, 0.15)',
-            unread: false,
-            group: 'Yesterday'
-        },
-        {
-            id: 5,
-            title: 'System Maintenance',
-            message: 'Scheduled downtime for server upgrades tonight at 2 AM EST.',
-            time: 'Yesterday',
-            type: 'update',
-            iconColor: '#a78bfa',
-            iconBg: 'rgba(167, 139, 250, 0.15)',
-            unread: false,
-            group: 'Yesterday'
+    useEffect(() => {
+        if (!auth.currentUser) return;
+
+        const unsubscribe = FirebaseService.subscribeToNotifications(
+            auth.currentUser.uid,
+            (data) => {
+                const mapped = data.map(n => ({
+                    ...n,
+                    time: n.createdAt?.toDate ? n.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+                    group: isToday(n.createdAt?.toDate?.()) ? 'Today' : 'Earlier'
+                }));
+                setNotifications(mapped);
+                setLoading(false);
+                setError(null);
+            },
+            (err) => {
+                console.error("Notifications Sync Error:", err);
+                setError(err.message);
+                setLoading(false);
+            }
+        );
+
+        // Safety timeout for loading state
+        const timer = setTimeout(() => {
+            if (loading) setLoading(false);
+        }, 8000);
+
+        return () => {
+            unsubscribe();
+            clearTimeout(timer);
+        };
+    }, []);
+
+    const handleSeedData = async () => {
+        setLoading(true);
+        try {
+            await FirebaseService.seedTestNotifications(auth.currentUser.uid);
+            alert('Test notifications created!');
+        } catch (err) {
+            console.error("Seeding error:", err);
+            alert('Failed to seed data: ' + err.message);
+        } finally {
+            setLoading(false);
         }
-    ];
+    };
+
+    const isToday = (someDate) => {
+        if (!someDate) return true;
+        const today = new Date();
+        return someDate.getDate() === today.getDate() &&
+            someDate.getMonth() === today.getMonth() &&
+            someDate.getFullYear() === today.getFullYear();
+    };
+
+    const handleMarkAllRead = async () => {
+        const unread = notifications.filter(n => !n.read);
+        for (const n of unread) {
+            await FirebaseService.markNotificationRead(n.id);
+        }
+    };
+
+    const filteredNotifications = notifications.filter(n => {
+        if (activeFilter === 'Unread') return !n.read;
+        if (activeFilter === 'Alerts') return n.type === 'warning' || n.category === 'Alert';
+        if (activeFilter === 'Mentions') return n.type === 'chat-bubble';
+        return true;
+    });
 
     return (
         <SafeAreaView style={styles.container}>
@@ -88,7 +105,7 @@ const NotificationsScreen = ({ onNavPress }) => {
             <View style={styles.header}>
                 <View style={styles.headerTop}>
                     <Text style={styles.headerTitle}>Notifications</Text>
-                    <TouchableOpacity>
+                    <TouchableOpacity onPress={handleMarkAllRead}>
                         <Text style={styles.markReadText}>Mark all read</Text>
                     </TouchableOpacity>
                 </View>
@@ -129,25 +146,83 @@ const NotificationsScreen = ({ onNavPress }) => {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
-                {/* Group: Today */}
-                <Text style={styles.groupLabel}>TODAY</Text>
-                {notifications.filter(n => n.group === 'Today').map(item => (
-                    <NotificationItem key={item.id} item={item} />
-                ))}
+                {loading ? (
+                    <View style={styles.loadingState}>
+                        <ActivityIndicator color={theme.colors.primary} size="large" />
+                        <Text style={styles.loadingText}>Loading notifications...</Text>
+                        <Text style={styles.indexHint}>If this takes too long, your Firestore Index might still be building.</Text>
 
-                {/* Group: Yesterday */}
-                <Text style={[styles.groupLabel, { marginTop: 24 }]}>YESTERDAY</Text>
-                {notifications.filter(n => n.group === 'Yesterday').map(item => (
-                    <NotificationItem key={item.id} item={item} />
-                ))}
-
-                {/* All Caught Up */}
-                <View style={styles.emptyState}>
-                    <View style={styles.emptyIconBg}>
-                        <MaterialIcons name="check" size={24} color={theme.colors.textMuted} />
+                        {/* Show seed button during loading if it takes more than 3 seconds */}
+                        <TouchableOpacity
+                            style={[styles.seedBtn, { marginTop: 32, opacity: 0.8 }]}
+                            onPress={handleSeedData}
+                        >
+                            <Text style={styles.seedBtnText}>Seed Data Anyway</Text>
+                        </TouchableOpacity>
                     </View>
-                    <Text style={styles.emptyText}>You're all caught up!</Text>
-                </View>
+                ) : error ? (
+                    <View style={styles.emptyState}>
+                        <MaterialIcons name="error-outline" size={64} color="#ef4444" />
+                        <Text style={styles.errorText}>Sync Error</Text>
+                        <Text style={styles.emptySubText}>{error}</Text>
+                        <TouchableOpacity style={styles.seedBtn} onPress={handleSeedData}>
+                            <Text style={styles.seedBtnText}>Seed Test Data Anyway</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : filteredNotifications.length > 0 ? (
+                    <>
+                        {/* Group: Today */}
+                        {filteredNotifications.filter(n => n.group === 'Today').length > 0 && (
+                            <>
+                                <Text style={styles.groupLabel}>TODAY</Text>
+                                {filteredNotifications.filter(n => n.group === 'Today').map(item => (
+                                    <NotificationItem
+                                        key={item.id}
+                                        item={{
+                                            ...item,
+                                            unread: !item.read,
+                                            type: item.type || 'info',
+                                            iconColor: item.iconColor || theme.colors.primary,
+                                            iconBg: item.iconBg || 'rgba(19, 236, 91, 0.15)'
+                                        }}
+                                    />
+                                ))}
+                            </>
+                        )}
+
+                        {/* Group: Earlier */}
+                        {filteredNotifications.filter(n => n.group === 'Earlier').length > 0 && (
+                            <>
+                                <Text style={[styles.groupLabel, { marginTop: 24 }]}>EARLIER</Text>
+                                {filteredNotifications.filter(n => n.group === 'Earlier').map(item => (
+                                    <NotificationItem
+                                        key={item.id}
+                                        item={{
+                                            ...item,
+                                            unread: !item.read,
+                                            type: item.type || 'info',
+                                            iconColor: item.iconColor || theme.colors.primary,
+                                            iconBg: item.iconBg || 'rgba(19, 236, 91, 0.15)'
+                                        }}
+                                    />
+                                ))}
+                            </>
+                        )}
+                    </>
+                ) : (
+                    /* All Caught Up */
+                    <View style={styles.emptyState}>
+                        <View style={styles.emptyIconBg}>
+                            <MaterialIcons name="notifications-none" size={48} color={theme.colors.textMuted} />
+                        </View>
+                        <Text style={styles.emptyTitle}>No Notifications</Text>
+                        <Text style={styles.emptySubText}>You're all caught up! New alerts will appear here.</Text>
+                        <TouchableOpacity style={styles.seedBtn} onPress={handleSeedData}>
+                            <MaterialIcons name="add" size={20} color={theme.colors.background} />
+                            <Text style={styles.seedBtnText}>Seed Test Data</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 <View style={{ height: 100 }} />
             </ScrollView>
@@ -164,7 +239,10 @@ const NotificationsScreen = ({ onNavPress }) => {
 };
 
 const NotificationItem = ({ item }) => (
-    <TouchableOpacity style={[styles.notiCard, !item.unread && styles.readNotiCard]}>
+    <TouchableOpacity
+        style={[styles.notiCard, !item.unread && styles.readNotiCard]}
+        onPress={() => item.unread && FirebaseService.markNotificationRead(item.id)}
+    >
         <View style={[styles.notiIconWrapper, { backgroundColor: item.iconBg }]}>
             <MaterialIcons name={item.type} size={26} color={item.iconColor} />
         </View>
@@ -349,7 +427,12 @@ const styles = StyleSheet.create({
     emptyState: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 32,
+        paddingVertical: 100,
+    },
+    loadingState: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 100,
     },
     emptyIconBg: {
         width: 56,
@@ -362,6 +445,47 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         color: theme.colors.textMuted,
+        fontSize: 14,
+        textAlign: 'center',
+    },
+    emptyTitle: {
+        color: theme.colors.text,
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 8,
+    },
+    emptySubText: {
+        color: theme.colors.textMuted,
+        fontSize: 14,
+        textAlign: 'center',
+        marginBottom: 24,
+        lineHeight: 20,
+    },
+    loadingText: {
+        color: theme.colors.text,
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginTop: 16,
+    },
+    indexHint: {
+        color: theme.colors.textMuted,
+        fontSize: 12,
+        textAlign: 'center',
+        marginTop: 12,
+        paddingHorizontal: 40,
+    },
+    seedBtn: {
+        backgroundColor: theme.colors.primary,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 25,
+        gap: 8,
+    },
+    seedBtnText: {
+        color: theme.colors.background,
+        fontWeight: 'bold',
         fontSize: 14,
     },
     bottomNav: {

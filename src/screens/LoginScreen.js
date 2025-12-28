@@ -9,14 +9,42 @@ import {
     Platform,
     SafeAreaView,
     StatusBar,
+    ActivityIndicator,
+    ScrollView,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../theme/theme';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase/config';
 
 const LoginScreen = ({ onSignUp, onLoginSuccess }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleLogin = async () => {
+        if (!email || !password) {
+            setError('Please enter both email and password');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            // onLoginSuccess will be called via auth state listener in App.js
+            // or we can call it here if we want immediate feedback
+            onLoginSuccess();
+        } catch (err) {
+            console.error(err);
+            setError('Invalid email or password');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -25,99 +53,123 @@ const LoginScreen = ({ onSignUp, onLoginSuccess }) => {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.content}
             >
-                {/* Back Button */}
-                <TouchableOpacity style={styles.backButton}>
-                    <MaterialIcons name="arrow-back" size={24} color={theme.colors.text} />
-                </TouchableOpacity>
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    {/* Back Button */}
+                    <TouchableOpacity style={styles.backButton}>
+                        <MaterialIcons name="arrow-back" size={24} color={theme.colors.text} />
+                    </TouchableOpacity>
 
-                <View style={styles.formContainer}>
-                    {/* Header/Branding */}
-                    <View style={styles.header}>
-                        <View style={styles.logoBadge}>
-                            <MaterialIcons name="security" size={40} color={theme.colors.primary} />
-                        </View>
-                        <Text style={styles.title}>Welcome Back</Text>
-                        <Text style={styles.subtitle}>
-                            Please sign in to continue reporting incidents and managing safety protocols.
-                        </Text>
-                    </View>
-
-                    {/* Form */}
-                    <View style={styles.form}>
-                        {/* Email Field */}
-                        <View style={styles.inputWrapper}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter your email"
-                                placeholderTextColor={theme.colors.textSecondary}
-                                value={email}
-                                onChangeText={setEmail}
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                            />
-                            <MaterialIcons
-                                name="mail"
-                                size={24}
-                                color={theme.colors.textSecondary}
-                                style={styles.inputIcon}
-                            />
+                    <View style={styles.formContainer}>
+                        {/* Header/Branding */}
+                        <View style={styles.header}>
+                            <View style={styles.logoBadge}>
+                                <MaterialIcons name="security" size={40} color={theme.colors.primary} />
+                            </View>
+                            <Text style={styles.title}>Welcome Back</Text>
+                            <Text style={styles.subtitle}>
+                                Please sign in to continue reporting incidents and managing safety protocols.
+                            </Text>
                         </View>
 
-                        {/* Password Field */}
-                        <View style={styles.inputWrapper}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter your password"
-                                placeholderTextColor={theme.colors.textSecondary}
-                                value={password}
-                                onChangeText={setPassword}
-                                secureTextEntry={!showPassword}
-                            />
-                            <TouchableOpacity
-                                onPress={() => setShowPassword(!showPassword)}
-                                style={styles.inputIcon}
-                            >
+                        {/* Form */}
+                        <View style={styles.form}>
+                            {/* Email Field */}
+                            <View style={styles.inputWrapper}>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Enter your email"
+                                    placeholderTextColor={theme.colors.textSecondary}
+                                    value={email}
+                                    onChangeText={setEmail}
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                />
                                 <MaterialIcons
-                                    name={showPassword ? "visibility" : "visibility-off"}
+                                    name="mail"
                                     size={24}
                                     color={theme.colors.textSecondary}
+                                    style={styles.inputIcon}
                                 />
-                            </TouchableOpacity>
-                        </View>
-
-                        {/* Forgot Password */}
-                        <TouchableOpacity style={styles.forgotPassword}>
-                            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-                        </TouchableOpacity>
-
-                        {/* Login Button */}
-                        <TouchableOpacity style={styles.loginButton} onPress={onLoginSuccess}>
-                            <Text style={styles.loginButtonText}>LOGIN</Text>
-                            <MaterialIcons name="login" size={20} color={theme.colors.background} />
-                        </TouchableOpacity>
-
-                        {/* Biometric Login */}
-                        <View style={styles.biometricContainer}>
-                            <View style={styles.dividerWrapper}>
-                                <View style={styles.divider} />
-                                <Text style={styles.dividerText}>OR LOGIN WITH</Text>
-                                <View style={styles.divider} />
                             </View>
 
-                            <TouchableOpacity style={styles.biometricButton}>
-                                <MaterialIcons name="fingerprint" size={32} color={theme.colors.primary} />
+                            {/* Password Field */}
+                            <View style={styles.inputWrapper}>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Enter your password"
+                                    placeholderTextColor={theme.colors.textSecondary}
+                                    value={password}
+                                    onChangeText={setPassword}
+                                    secureTextEntry={!showPassword}
+                                />
+                                <TouchableOpacity
+                                    onPress={() => setShowPassword(!showPassword)}
+                                    style={styles.inputIcon}
+                                >
+                                    <MaterialIcons
+                                        name={showPassword ? "visibility" : "visibility-off"}
+                                        size={24}
+                                        color={theme.colors.textSecondary}
+                                    />
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* Forgot Password */}
+                            <TouchableOpacity style={styles.forgotPassword}>
+                                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
                             </TouchableOpacity>
+
+                            {/* Error Message */}
+                            {error ? (
+                                <View style={styles.errorWrapper}>
+                                    <MaterialIcons name="error" size={16} color="#ef4444" />
+                                    <Text style={styles.errorText}>{error}</Text>
+                                </View>
+                            ) : null}
+
+                            {/* Login Button */}
+                            <TouchableOpacity
+                                style={[styles.loginButton, loading && { opacity: 0.7 }]}
+                                onPress={handleLogin}
+                                disabled={loading}
+                            >
+                                {loading ? (
+                                    <ActivityIndicator color={theme.colors.background} />
+                                ) : (
+                                    <>
+                                        <Text style={styles.loginButtonText}>LOGIN</Text>
+                                        <MaterialIcons name="login" size={20} color={theme.colors.background} />
+                                    </>
+                                )}
+                            </TouchableOpacity>
+
+                            {/* Biometric Login */}
+                            <View style={styles.biometricContainer}>
+                                <View style={styles.dividerWrapper}>
+                                    <View style={styles.divider} />
+                                    <Text style={styles.dividerText}>OR LOGIN WITH</Text>
+                                    <View style={styles.divider} />
+                                </View>
+
+                                <TouchableOpacity style={styles.biometricButton}>
+                                    <MaterialIcons name="fingerprint" size={32} color={theme.colors.primary} />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {/* Footer */}
+                        <View style={styles.footer}>
+                            <Text style={styles.footerText}>
+                                Don't have an account?{' '}
+                                <Text style={styles.signUpLink} onPress={onSignUp}>Sign Up</Text>
+                            </Text>
                         </View>
                     </View>
-
-                    {/* Footer */}
-                    <View style={styles.footer}>
-                        <Text style={styles.footerText}>
-                            Don't have an account?{' '}
-                            <Text style={styles.signUpLink} onPress={onSignUp}>Sign Up</Text>
-                        </Text>
-                    </View>
-                </View>
+                </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
@@ -130,6 +182,9 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
     },
     backButton: {
         padding: theme.spacing.md,
@@ -226,6 +281,21 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         letterSpacing: 1.2,
         marginRight: theme.spacing.sm,
+    },
+    errorWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 16,
+        gap: 8,
+        width: '100%',
+    },
+    errorText: {
+        color: '#ef4444',
+        fontSize: 14,
+        fontWeight: '500',
     },
     biometricContainer: {
         alignItems: 'center',
