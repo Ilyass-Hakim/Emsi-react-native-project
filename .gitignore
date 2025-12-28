@@ -39,3 +39,11 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+src/screens/HomeScreen.js
+src/screens/IncidentDetailsScreen.js
+src/screens/MyIncidentsScreen.js
+src/screens/NewIncidentScreen.js
+src/screens/NotificationsScreen.js
+src/screens/ProfileScreen.js
+src/theme/theme.js
