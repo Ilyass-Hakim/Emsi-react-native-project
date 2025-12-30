@@ -92,7 +92,7 @@ const MyIncidentsScreen = ({ onNavPress, onIncidentPress }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
 
             {/* Header */}
             <View style={styles.header}>
@@ -228,7 +228,6 @@ const MyIncidentsScreen = ({ onNavPress, onIncidentPress }) => {
                         <NavButton icon="home" label="Home" onPress={() => onNavPress('home')} />
                         <NavButton icon="assignment" label="Incidents" active onPress={() => onNavPress('my-incidents')} />
                         <NavButton icon="notifications" label="Notifs" onPress={() => onNavPress('notifications')} />
-                        <NavButton icon="analytics" label="Reports" onPress={() => onNavPress('reports')} />
                         <NavButton icon="person" label="Profile" onPress={() => onNavPress('profile')} />
                     </>
                 )}
@@ -480,3 +479,4 @@ const styles = StyleSheet.create({
 });
 
 export default MyIncidentsScreen;
+

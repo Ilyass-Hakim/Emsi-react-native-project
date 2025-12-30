@@ -162,7 +162,7 @@ const IncomingIncidentsScreen = ({ onNavPress, onIncidentPress }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
 
             {/* Header */}
             <View style={styles.header}>
@@ -571,3 +571,4 @@ const styles = StyleSheet.create({
 });
 
 export default IncomingIncidentsScreen;
+

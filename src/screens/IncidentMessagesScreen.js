@@ -134,7 +134,7 @@ const IncidentMessagesScreen = ({ incidentId, onBack, onNavPress }) => {
     if (loading || !incident) {
         return (
             <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="light-content" />
+                <StatusBar style="light" />
                 <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 100 }} />
             </SafeAreaView>
         );
@@ -142,7 +142,7 @@ const IncidentMessagesScreen = ({ incidentId, onBack, onNavPress }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
 
             {/* Header */}
             <View style={styles.header}>
@@ -294,10 +294,21 @@ const IncidentMessagesScreen = ({ incidentId, onBack, onNavPress }) => {
 
             {/* Bottom Navigation */}
             <View style={styles.bottomNav}>
-                <NavButton icon="dashboard" label="Dashboard" onPress={() => onNavPress(profile?.role === 'Reviewer' ? 'reviewer-dashboard' : 'home')} />
-                <NavButton icon="assignment-late" label="Incidents" active onPress={() => onNavPress(profile?.role === 'Reviewer' ? 'incoming-incidents' : 'my-incidents')} />
-                <NavButton icon="assignment-ind" label="Assignments" onPress={() => { }} />
-                <NavButton icon="bar-chart" label="Reports" onPress={() => { }} />
+                {profile?.role === 'Reviewer' ? (
+                    <>
+                        <NavButton icon="dashboard" label="Dashboard" onPress={() => onNavPress('reviewer-dashboard')} />
+                        <NavButton icon="assignment-late" label="Incidents" active onPress={() => onNavPress('incoming-incidents')} />
+                        <NavButton icon="assignment-ind" label="Assignments" onPress={() => { }} />
+                        <NavButton icon="bar-chart" label="Reports" onPress={() => { }} />
+                    </>
+                ) : (
+                    <>
+                        <NavButton icon="home" label="Home" onPress={() => onNavPress('home')} />
+                        <NavButton icon="assignment" label="Incidents" active onPress={() => onNavPress('my-incidents')} />
+                        <NavButton icon="notifications" label="Notifs" onPress={() => onNavPress('notifications')} />
+                        <NavButton icon="person" label="Profile" onPress={() => onNavPress('profile')} />
+                    </>
+                )}
             </View>
         </SafeAreaView>
     );
@@ -579,3 +590,4 @@ const styles = StyleSheet.create({
 });
 
 export default IncidentMessagesScreen;
+

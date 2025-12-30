@@ -48,7 +48,7 @@ const AssignmentsListScreen = ({ onNavPress, onIncidentPress }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
 
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Unassigned Incidents</Text>
@@ -235,3 +235,4 @@ const styles = StyleSheet.create({
 });
 
 export default AssignmentsListScreen;
+

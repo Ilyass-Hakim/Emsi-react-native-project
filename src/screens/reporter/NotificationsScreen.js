@@ -5,10 +5,10 @@ import {
     Text,
     ScrollView,
     TouchableOpacity,
-    StatusBar,
     Platform,
     ActivityIndicator,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
@@ -102,7 +102,7 @@ const NotificationsScreen = ({ onNavPress }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
 
             {/* Header */}
             <View style={styles.header}>
@@ -244,7 +244,6 @@ const NotificationsScreen = ({ onNavPress }) => {
                         <NavButton icon="home" label="Home" onPress={() => onNavPress('home')} />
                         <NavButton icon="assignment" label="Incidents" onPress={() => onNavPress('my-incidents')} />
                         <NavButton icon="notifications" label="Notifs" active onPress={() => onNavPress('notifications')} />
-                        <NavButton icon="analytics" label="Reports" onPress={() => onNavPress('reports')} />
                         <NavButton icon="person" label="Profile" onPress={() => onNavPress('profile')} />
                     </>
                 )}
@@ -303,7 +302,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(16, 34, 22, 0.95)',
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.border,
-        paddingTop: Platform.OS === 'ios' ? 0 : 40,
+        paddingTop: 8,
     },
     headerTop: {
         flexDirection: 'row',
@@ -539,3 +538,4 @@ const styles = StyleSheet.create({
 });
 
 export default NotificationsScreen;
+

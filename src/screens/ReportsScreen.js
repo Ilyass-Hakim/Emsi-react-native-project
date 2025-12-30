@@ -145,7 +145,7 @@ const ReportsScreen = ({ onNavPress }) => {
     if (loading || !analytics) {
         return (
             <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="light-content" />
+                <StatusBar style="light" />
                 <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 100 }} />
             </SafeAreaView>
         );
@@ -153,7 +153,7 @@ const ReportsScreen = ({ onNavPress }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
 
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Reports</Text>
@@ -581,3 +581,4 @@ const styles = StyleSheet.create({
 });
 
 export default ReportsScreen;
+

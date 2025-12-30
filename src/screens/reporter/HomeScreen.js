@@ -112,7 +112,7 @@ const HomeScreen = ({ onReportPress, onNavPress }) => {
     };
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
 
             {/* Top App Bar */}
             <View style={styles.appBar}>
@@ -128,7 +128,10 @@ const HomeScreen = ({ onReportPress, onNavPress }) => {
                         <Text style={styles.role}>{userRole}</Text>
                     </View>
                 </View>
-                <TouchableOpacity style={styles.notificationBtn}>
+                <TouchableOpacity
+                    style={styles.notificationBtn}
+                    onPress={() => onNavPress('notifications')}
+                >
                     <MaterialIcons name="notifications" size={24} color={theme.colors.text} />
                     <View style={styles.notificationBadge} />
                 </TouchableOpacity>
@@ -231,11 +234,6 @@ const HomeScreen = ({ onReportPress, onNavPress }) => {
                     onPress={() => onNavPress('notifications')}
                 />
                 <NavButton
-                    icon="analytics"
-                    label="Reports"
-                    onPress={() => onNavPress('reports')}
-                />
-                <NavButton
                     icon="person"
                     label="Profile"
                     onPress={() => onNavPress('profile')}
@@ -310,7 +308,7 @@ const styles = StyleSheet.create({
     appBar: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'between',
+        justifyContent: 'space-between',
         paddingHorizontal: theme.spacing.lg,
         paddingVertical: theme.spacing.md,
         backgroundColor: 'rgba(16, 34, 22, 0.95)',
@@ -556,7 +554,7 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderTopColor: 'rgba(255,255,255,0.1)',
         paddingBottom: 20,
-        backdropBlur: 10,
+
     },
     navBtn: {
         flex: 1,
@@ -582,3 +580,5 @@ const styles = StyleSheet.create({
 });
 
 export default HomeScreen;
+
+

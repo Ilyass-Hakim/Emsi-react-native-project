@@ -5,9 +5,9 @@ import {
     Text,
     ScrollView,
     TouchableOpacity,
-    StatusBar,
     ActivityIndicator,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
@@ -51,7 +51,7 @@ const IncidentHistoryScreen = ({ onBack, onNavPress }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
 
             <View style={styles.header}>
                 <TouchableOpacity onPress={onBack} style={styles.backBtn}>
@@ -187,3 +187,4 @@ const styles = StyleSheet.create({
 });
 
 export default IncidentHistoryScreen;
+

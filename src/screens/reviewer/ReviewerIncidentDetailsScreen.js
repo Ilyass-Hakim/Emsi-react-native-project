@@ -86,22 +86,19 @@ const ReviewerIncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
     };
 
     const handleReject = () => {
-        Alert.prompt(
+        // Simple Alert instead of prompt to avoid Android crash
+        Alert.alert(
             'Reject Incident',
-            'Please provide a reason for rejection:',
+            'This feature (rejection with reason) requires a custom modal on Android. For now, we are rejecting with a default reason.',
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
-                    text: 'Reject',
+                    text: 'Reject Anyway',
                     style: 'destructive',
-                    onPress: async (reason) => {
-                        if (!reason || reason.trim() === '') {
-                            Alert.alert('Error', 'Please provide a reason');
-                            return;
-                        }
+                    onPress: async () => {
                         setActionLoading(true);
                         try {
-                            await FirebaseService.rejectIncident(incidentId, reason, profile?.fullName || 'Reviewer');
+                            await FirebaseService.rejectIncident(incidentId, "Rejected by Reviewer", profile?.fullName || 'Reviewer');
                             Alert.alert('Success', 'Incident rejected');
                             onBack();
                         } catch (error) {
@@ -111,8 +108,7 @@ const ReviewerIncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
                         }
                     }
                 }
-            ],
-            'plain-text'
+            ]
         );
     };
 
@@ -144,7 +140,7 @@ const ReviewerIncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
     if (loading || !incident) {
         return (
             <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="light-content" />
+                <StatusBar style="light" />
                 <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 100 }} />
             </SafeAreaView>
         );
@@ -152,7 +148,7 @@ const ReviewerIncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
 
             {/* Header */}
             <View style={styles.header}>
@@ -589,7 +585,7 @@ const styles = StyleSheet.create({
         gap: 12,
         padding: theme.spacing.lg,
         backgroundColor: theme.colors.background + 'F0',
-        backdropFilter: 'blur(10px)',
+
         borderTopWidth: 1,
         borderTopColor: 'rgba(255, 255, 255, 0.05)',
     },
@@ -652,3 +648,5 @@ const styles = StyleSheet.create({
 });
 
 export default ReviewerIncidentDetailsScreen;
+
+

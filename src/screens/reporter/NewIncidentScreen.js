@@ -8,8 +8,9 @@ import {
     ScrollView,
     Platform,
     ActivityIndicator,
-    StatusBar,
+    Image,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
@@ -62,7 +63,7 @@ const NewIncidentScreen = ({ onCancel, onSubmit }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
 
             {/* Header */}
             <View style={styles.header}>
@@ -463,7 +464,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
-        backdropFilter: 'blur(4px)',
+        
     },
     footer: {
         position: 'absolute',
@@ -498,3 +499,4 @@ const styles = StyleSheet.create({
 });
 
 export default NewIncidentScreen;
+

@@ -52,7 +52,7 @@ const LoginScreen = ({ onSignUp, onLoginSuccess }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.content}
@@ -347,3 +347,4 @@ const styles = StyleSheet.create({
 });
 
 export default LoginScreen;
+

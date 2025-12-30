@@ -10,8 +10,8 @@ import {
     Switch,
     Platform,
     ActivityIndicator,
-    StatusBar,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
@@ -57,7 +57,7 @@ const ProfileScreen = ({ onLogout, onNavPress, onSave }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
 
             {/* Header */}
             <View style={styles.header}>
@@ -186,7 +186,6 @@ const ProfileScreen = ({ onLogout, onNavPress, onSave }) => {
                         <NavButton icon="home" label="Home" onPress={() => onNavPress('home')} />
                         <NavButton icon="assignment" label="Incidents" onPress={() => onNavPress('my-incidents')} />
                         <NavButton icon="notifications" label="Notifs" onPress={() => onNavPress('notifications')} />
-                        <NavButton icon="analytics" label="Reports" onPress={() => onNavPress('reports')} />
                         <NavButton icon="person" label="Profile" active onPress={() => onNavPress('profile')} />
                     </>
                 )}
@@ -507,3 +506,4 @@ const styles = StyleSheet.create({
 });
 
 export default ProfileScreen;
+

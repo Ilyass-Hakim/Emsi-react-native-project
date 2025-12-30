@@ -5,11 +5,12 @@ import {
     Text,
     ScrollView,
     TouchableOpacity,
-    Image,
     Platform,
     ActivityIndicator,
-    StatusBar,
+    Image,
+    Alert,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
@@ -51,20 +52,11 @@ const IncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
     }, [incidentId]);
 
     const handleAddUpdate = async () => {
-        const updateText = prompt("Enter your update/comment:");
-        if (!updateText) return;
-
-        try {
-            await FirebaseService.addIncidentUpdate(incidentId, {
-                status: incident.status, // Keep current status
-                note: updateText,
-                user: profile?.fullName || 'User'
-            });
-            alert('Update added successfully!');
-        } catch (error) {
-            console.error("Error adding update:", error);
-            alert('Failed to add update.');
-        }
+        Alert.alert(
+            "Add Update",
+            "This feature will be available in the next version.",
+            [{ text: "OK" }]
+        );
     };
 
     const getIconForCategory = (category) => {
@@ -107,7 +99,7 @@ const IncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
     };
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
 
             {/* Header */}
             <View style={styles.header}>
@@ -809,3 +801,4 @@ const styles = StyleSheet.create({
 });
 
 export default IncidentDetailsScreen;
+

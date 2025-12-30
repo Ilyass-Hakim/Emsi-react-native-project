@@ -126,7 +126,7 @@ const AssignResponderScreen = ({ incidentId, onBack, onAssigned }) => {
     if (loading || !incident) {
         return (
             <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="light-content" />
+                <StatusBar style="light" />
                 <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 100 }} />
             </SafeAreaView>
         );
@@ -134,7 +134,7 @@ const AssignResponderScreen = ({ incidentId, onBack, onAssigned }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
 
             {/* Header */}
             <View style={styles.header}>
@@ -550,3 +550,4 @@ const styles = StyleSheet.create({
 });
 
 export default AssignResponderScreen;
+

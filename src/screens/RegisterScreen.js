@@ -74,7 +74,7 @@ const RegisterScreen = ({ onLogin }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
             <View style={styles.headerNav}>
                 <TouchableOpacity style={styles.backButton} onPress={onLogin}>
                     <MaterialIcons name="arrow-back" size={24} color={theme.colors.text} />
@@ -531,3 +531,4 @@ const styles = StyleSheet.create({
 });
 
 export default RegisterScreen;
+
