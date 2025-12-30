@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, ActivityIndicator } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { theme } from './src/theme/theme';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -10,29 +11,55 @@ import IncidentDetailsScreen from './src/screens/reporter/IncidentDetailsScreen'
 import IncidentHistoryScreen from './src/screens/reporter/IncidentHistoryScreen';
 import ProfileScreen from './src/screens/reporter/ProfileScreen';
 import NotificationsScreen from './src/screens/reporter/NotificationsScreen';
+import ReviewerDashboard from './src/screens/reviewer/ReviewerDashboard';
+import IncomingIncidentsScreen from './src/screens/reviewer/IncomingIncidentsScreen';
+import AssignResponderScreen from './src/screens/reviewer/AssignResponderScreen';
+import ReviewerIncidentDetailsScreen from './src/screens/reviewer/ReviewerIncidentDetailsScreen';
+import AssignmentsListScreen from './src/screens/reviewer/AssignmentsListScreen';
+import IncidentMessagesScreen from './src/screens/IncidentMessagesScreen';
+import ReportsScreen from './src/screens/ReportsScreen';
 
 import useStore from './src/store/useStore';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('login');
   const [selectedIncidentId, setSelectedIncidentId] = useState(null);
-  const { user, loading, initializeAuth } = useStore();
+  const { user, profile, loading, initializeAuth } = useStore();
 
   useEffect(() => {
     initializeAuth();
   }, []);
 
   useEffect(() => {
-    if (!loading) {
-      if (user) {
-        if (currentScreen === 'login' || currentScreen === 'register') {
+    if (!loading && user) {
+      if (profile) {
+        // Normal flow with profile
+        const isEntryScreen = currentScreen === 'login' || currentScreen === 'register';
+
+        if (isEntryScreen) {
+          if (profile.role === 'Reviewer') {
+            setCurrentScreen('reviewer-dashboard');
+          } else {
+            setCurrentScreen('home');
+          }
+        } else if (profile.role === 'Reviewer' && currentScreen === 'home') {
+          setCurrentScreen('reviewer-dashboard');
+        } else if (profile.role !== 'Reviewer' && currentScreen === 'reviewer-dashboard') {
           setCurrentScreen('home');
         }
       } else {
+        // Authenticated but no profile (e.g., deleted document or incomplete registration)
+        // We can redirect to profile or allow home but with limited features
+        if (currentScreen === 'login' || currentScreen === 'register') {
+          setCurrentScreen('profile'); // Send them to profile to fix it if possible
+        }
+      }
+    } else if (!loading && !user) {
+      if (currentScreen !== 'login' && currentScreen !== 'register') {
         setCurrentScreen('login');
       }
     }
-  }, [user, loading]);
+  }, [user, loading, profile, currentScreen]);
 
   const renderScreen = () => {
     switch (currentScreen) {
@@ -40,7 +67,7 @@ export default function App() {
         return (
           <LoginScreen
             onSignUp={() => setCurrentScreen('register')}
-            onLoginSuccess={() => setCurrentScreen('home')}
+            onLoginSuccess={() => { }} // Rely on side-effect in useEffect
           />
         );
       case 'register':
@@ -66,6 +93,16 @@ export default function App() {
             }}
           />
         );
+      case 'incoming-incidents':
+        return (
+          <IncomingIncidentsScreen
+            onNavPress={(screen) => setCurrentScreen(screen)}
+            onIncidentPress={(id) => {
+              setSelectedIncidentId(id);
+              setCurrentScreen('incident-details');
+            }}
+          />
+        );
       case 'notifications':
         return (
           <NotificationsScreen
@@ -75,25 +112,35 @@ export default function App() {
       case 'new-incident':
         return (
           <NewIncidentScreen
-            onCancel={() => setCurrentScreen('home')}
+            onCancel={() => setCurrentScreen(profile?.role === 'Reviewer' ? 'reviewer-dashboard' : 'home')}
             onSubmit={() => setCurrentScreen('my-incidents')}
           />
         );
       case 'incident-history':
         return (
           <IncidentHistoryScreen
-            onBack={() => setCurrentScreen('home')}
+            onBack={() => setCurrentScreen(profile?.role === 'Reviewer' ? 'reviewer-dashboard' : 'home')}
             onNavPress={setCurrentScreen}
           />
         );
       case 'incident-details':
-        return (
-          <IncidentDetailsScreen
-            incidentId={selectedIncidentId}
-            onBack={() => setCurrentScreen('my-incidents')}
-            onNavPress={(screen) => setCurrentScreen(screen)}
-          />
-        );
+        if (profile?.role === 'Reviewer') {
+          return (
+            <ReviewerIncidentDetailsScreen
+              incidentId={selectedIncidentId}
+              onBack={() => setCurrentScreen('incoming-incidents')}
+              onNavPress={(screen) => setCurrentScreen(screen)}
+            />
+          );
+        } else {
+          return (
+            <IncidentDetailsScreen
+              incidentId={selectedIncidentId}
+              onBack={() => setCurrentScreen('my-incidents')}
+              onNavPress={(screen) => setCurrentScreen(screen)}
+            />
+          );
+        }
       case 'profile':
         return (
           <ProfileScreen
@@ -102,26 +149,73 @@ export default function App() {
             onSave={() => alert('Profile Saved!')}
           />
         );
+      case 'reviewer-dashboard':
+        return (
+          <ReviewerDashboard
+            onNavPress={(screen) => setCurrentScreen(screen)}
+            onIncidentPress={(id) => {
+              setSelectedIncidentId(id);
+              setCurrentScreen('incident-details');
+            }}
+          />
+        );
+      case 'assign-responder':
+        return (
+          <AssignResponderScreen
+            incidentId={selectedIncidentId}
+            onBack={() => setCurrentScreen('incident-details')}
+            onAssigned={() => {
+              // Refresh incident details after assignment
+              setCurrentScreen('incident-details');
+            }}
+          />
+        );
+      case 'assignments-list':
+        return (
+          <AssignmentsListScreen
+            onNavPress={(screen) => setCurrentScreen(screen)}
+            onIncidentPress={(id) => {
+              setSelectedIncidentId(id);
+              setCurrentScreen('incident-details');
+            }}
+          />
+        );
+      case 'incident-messages':
+        return (
+          <IncidentMessagesScreen
+            incidentId={selectedIncidentId}
+            onBack={() => setCurrentScreen('incident-details')}
+            onNavPress={(screen) => setCurrentScreen(screen)}
+          />
+        );
+      case 'reports':
+        return (
+          <ReportsScreen
+            onNavPress={(screen) => setCurrentScreen(screen)}
+          />
+        );
       default:
         return (
           <LoginScreen
             onSignUp={() => setCurrentScreen('register')}
-            onLoginSuccess={() => setCurrentScreen('home')}
+            onLoginSuccess={() => { }} // Rely on useEffect for navigation
           />
         );
     }
   };
 
   return (
-    <View style={styles.container}>
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        </View>
-      ) : (
-        renderScreen()
-      )}
-    </View>
+    <SafeAreaProvider>
+      <View style={styles.container}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+          </View>
+        ) : (
+          renderScreen()
+        )}
+      </View>
+    </SafeAreaProvider>
   );
 }
 

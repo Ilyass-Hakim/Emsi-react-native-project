@@ -6,11 +6,11 @@ import {
     ScrollView,
     TouchableOpacity,
     Image,
-    SafeAreaView,
-    StatusBar,
     Platform,
     ActivityIndicator,
+    StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -35,8 +35,8 @@ const IncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
                     ...data,
                     time: data.createdAt?.toDate ? data.createdAt.toDate().toLocaleString() : 'Just now',
                     icon: getIconForCategory(data.category),
-                    priority: data.priority || 'NORMAL',
-                    priorityColor: getPriorityColor(data.priority || 'NORMAL'),
+                    priority: data.priority || 'Medium',
+                    priorityColor: getPriorityColor(data.priority || 'Medium'),
                     // Dynamic history
                     history: (data.statusHistory || []).map(h => ({
                         ...h,
@@ -79,10 +79,21 @@ const IncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
 
     const getPriorityColor = (priority) => {
         switch (priority) {
-            case 'HIGH': return '#ef4444';
-            case 'NORMAL': return '#3b82f6';
-            case 'LOW': return '#10b981';
+            case 'Critical': return '#ef4444';
+            case 'High': return '#f59e0b';
+            case 'Medium': return theme.colors.primary;
+            case 'Low': return '#64748b';
             default: return theme.colors.textMuted;
+        }
+    };
+
+    const getPriorityIcon = (priority) => {
+        switch (priority) {
+            case 'Critical': return 'warning';
+            case 'High': return 'priority-high';
+            case 'Medium': return 'equalizer';
+            case 'Low': return 'low-priority';
+            default: return 'info';
         }
     };
 
@@ -124,8 +135,8 @@ const IncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
                         <View style={styles.topSection}>
                             <View style={styles.badgeRow}>
                                 <View style={[styles.badge, styles.priorityBadge, { borderColor: incident.priorityColor + '40' }]}>
-                                    <MaterialIcons name="warning" size={14} color={incident.priorityColor} />
-                                    <Text style={[styles.badgeText, { color: incident.priorityColor }]}>{incident.priority} PRIORITY</Text>
+                                    <MaterialIcons name={getPriorityIcon(incident.priority)} size={14} color={incident.priorityColor} />
+                                    <Text style={[styles.badgeText, { color: incident.priorityColor }]}>{incident.priority.toUpperCase()} SEVERITY</Text>
                                 </View>
                                 <View style={[styles.badge, styles.statusBadge, { borderColor: getStatusColor(incident.status) + '40' }]}>
                                     <MaterialIcons name="sync" size={14} color={getStatusColor(incident.status)} />
@@ -210,26 +221,60 @@ const IncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
                         {/* Responder Section */}
                         <View style={styles.section}>
                             <Text style={styles.sectionLabel}>ASSIGNED RESPONDER</Text>
-                            <View style={styles.responderCard}>
-                                <View style={styles.responderInfo}>
-                                    <Image
-                                        source={{ uri: 'https://i.pravatar.cc/100?u=mike' }}
-                                        style={styles.responderAvatar}
-                                    />
-                                    <View>
-                                        <Text style={styles.responderName}>Mike Maintenance</Text>
-                                        <Text style={styles.responderRole}>Lead Technician</Text>
+                            {incident.assignedToName ? (
+                                <View style={styles.responderCard}>
+                                    <View style={styles.responderInfo}>
+                                        <Image
+                                            source={{ uri: `https://i.pravatar.cc/100?u=${incident.assignedTo}` }}
+                                            style={styles.responderAvatar}
+                                        />
+                                        <View>
+                                            <Text style={styles.responderName}>{incident.assignedToName}</Text>
+                                            <Text style={styles.responderRole}>{incident.assignedToRole || 'Technician'}</Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.responderActions}>
+                                        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary + '20' }]}>
+                                            <MaterialIcons name="call" size={20} color={theme.colors.primary} />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.actionBtn}>
+                                            <MaterialIcons name="chat" size={20} color={theme.colors.textSecondary} />
+                                        </TouchableOpacity>
                                     </View>
                                 </View>
-                                <View style={styles.responderActions}>
-                                    <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary + '20' }]}>
-                                        <MaterialIcons name="call" size={20} color={theme.colors.primary} />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.actionBtn}>
-                                        <MaterialIcons name="chat" size={20} color={theme.colors.textSecondary} />
-                                    </TouchableOpacity>
+                            ) : (
+                                <View style={styles.noResponderContainer}>
+                                    <MaterialIcons name="person-add" size={48} color={theme.colors.textMuted} />
+                                    <Text style={styles.noResponderText}>No responder assigned yet</Text>
+                                    {profile?.role === 'Reviewer' && (
+                                        <TouchableOpacity
+                                            style={styles.assignBtn}
+                                            onPress={() => onNavPress('assign-responder')}
+                                        >
+                                            <MaterialIcons name="person-add" size={20} color={theme.colors.background} />
+                                            <Text style={styles.assignBtnText}>Assign Responder</Text>
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
-                            </View>
+                            )}
+                        </View>
+
+                        {/* Messages Section */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionLabel}>MESSAGES</Text>
+                            <TouchableOpacity
+                                style={styles.messagesBtn}
+                                onPress={() => onNavPress('incident-messages')}
+                            >
+                                <View style={styles.messagesBtnContent}>
+                                    <MaterialIcons name="chat" size={24} color={theme.colors.primary} />
+                                    <View style={styles.messagesBtnText}>
+                                        <Text style={styles.messagesBtnTitle}>View Discussion</Text>
+                                        <Text style={styles.messagesBtnSubtitle}>Communicate with reviewers and responders</Text>
+                                    </View>
+                                </View>
+                                <MaterialIcons name="chevron-right" size={24} color={theme.colors.textSecondary} />
+                            </TouchableOpacity>
                         </View>
 
                         {/* Activity Log */}
@@ -671,6 +716,65 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 1,
         shadowRadius: 5,
+    },
+    noResponderContainer: {
+        backgroundColor: theme.colors.surface,
+        borderRadius: 12,
+        padding: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.05)',
+        borderStyle: 'dashed',
+    },
+    noResponderText: {
+        color: theme.colors.textSecondary,
+        fontSize: 14,
+        marginTop: 8,
+        marginBottom: 16,
+    },
+    assignBtn: {
+        backgroundColor: theme.colors.primary,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 8,
+    },
+    assignBtnText: {
+        color: theme.colors.background,
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    messagesBtn: {
+        backgroundColor: theme.colors.surface,
+        borderRadius: 12,
+        padding: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    messagesBtnContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        flex: 1,
+    },
+    messagesBtnText: {
+        flex: 1,
+    },
+    messagesBtnTitle: {
+        fontSize: 15,
+        fontWeight: 'bold',
+        color: theme.colors.text,
+        marginBottom: 2,
+    },
+    messagesBtnSubtitle: {
+        fontSize: 12,
+        color: theme.colors.textSecondary,
     },
     loadingContainer: {
         marginTop: 100,

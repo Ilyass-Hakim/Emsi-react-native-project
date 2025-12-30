@@ -6,13 +6,13 @@ import {
     ScrollView,
     TouchableOpacity,
     Image,
-    SafeAreaView,
-    StatusBar,
     TextInput,
     Switch,
     Platform,
     ActivityIndicator,
+    StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { doc, getDoc } from 'firebase/firestore';
@@ -174,10 +174,22 @@ const ProfileScreen = ({ onLogout, onNavPress, onSave }) => {
 
             {/* Bottom Nav */}
             <View style={styles.bottomNav}>
-                <NavButton icon="home" label="Home" onPress={() => onNavPress('home')} />
-                <NavButton icon="assignment" label="My Incidents" onPress={() => onNavPress('my-incidents')} />
-                <NavButton icon="notifications" label="Notifications" onPress={() => onNavPress('notifications')} />
-                <NavButton icon="person" label="Profile" active onPress={() => onNavPress('profile')} />
+                {role === 'Reviewer' ? (
+                    <>
+                        <NavButton icon="dashboard" label="Dashboard" onPress={() => onNavPress('reviewer-dashboard')} />
+                        <NavButton icon="warning" label="Incidents" onPress={() => onNavPress('incoming-incidents')} />
+                        <NavButton icon="assignment" label="Assign" onPress={() => { }} />
+                        <NavButton icon="analytics" label="Reports" onPress={() => onNavPress('reports')} />
+                    </>
+                ) : (
+                    <>
+                        <NavButton icon="home" label="Home" onPress={() => onNavPress('home')} />
+                        <NavButton icon="assignment" label="Incidents" onPress={() => onNavPress('my-incidents')} />
+                        <NavButton icon="notifications" label="Notifs" onPress={() => onNavPress('notifications')} />
+                        <NavButton icon="analytics" label="Reports" onPress={() => onNavPress('reports')} />
+                        <NavButton icon="person" label="Profile" active onPress={() => onNavPress('profile')} />
+                    </>
+                )}
             </View>
         </SafeAreaView>
     );

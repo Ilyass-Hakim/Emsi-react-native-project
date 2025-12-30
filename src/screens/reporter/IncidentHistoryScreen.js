@@ -5,10 +5,10 @@ import {
     Text,
     ScrollView,
     TouchableOpacity,
-    SafeAreaView,
     StatusBar,
     ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';

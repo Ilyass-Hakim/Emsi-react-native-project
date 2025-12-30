@@ -6,12 +6,11 @@ import {
     TextInput,
     TouchableOpacity,
     ScrollView,
-    SafeAreaView,
-    StatusBar,
-    Image,
     Platform,
     ActivityIndicator,
+    StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -28,6 +27,7 @@ const NewIncidentScreen = ({ onCancel, onSubmit }) => {
     const [department, setDepartment] = useState(profile?.department || '');
     const [office, setOffice] = useState('');
     const [area, setArea] = useState('');
+    const [severity, setSeverity] = useState('Medium');
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async () => {
@@ -42,6 +42,7 @@ const NewIncidentScreen = ({ onCancel, onSubmit }) => {
                 title,
                 description,
                 category,
+                priority: severity,
                 department: department || 'Not specified',
                 office: office || 'Not specified',
                 area: area || 'Not specified',
@@ -101,7 +102,6 @@ const NewIncidentScreen = ({ onCancel, onSubmit }) => {
                         <TouchableOpacity
                             style={styles.selector}
                             onPress={() => {
-                                // Simple mock selection for now
                                 const categories = ['Safety', 'Maintenance', 'Security', 'IT Issue'];
                                 const selected = categories[Math.floor(Math.random() * categories.length)];
                                 setCategory(selected);
@@ -112,6 +112,32 @@ const NewIncidentScreen = ({ onCancel, onSubmit }) => {
                             </Text>
                             <MaterialIcons name="expand-more" size={24} color={theme.colors.textMuted} />
                         </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Severity / Priority</Text>
+                        <View style={styles.severityContainer}>
+                            {['Low', 'Medium', 'High', 'Critical'].map((level) => (
+                                <TouchableOpacity
+                                    key={level}
+                                    style={[
+                                        styles.severityBtn,
+                                        severity === level && {
+                                            backgroundColor: getSeverityColor(level),
+                                            borderColor: getSeverityColor(level)
+                                        }
+                                    ]}
+                                    onPress={() => setSeverity(level)}
+                                >
+                                    <Text style={[
+                                        styles.severityBtnText,
+                                        severity === level && { color: theme.colors.black, fontWeight: 'bold' }
+                                    ]}>
+                                        {level}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
                     </View>
                 </View>
 
@@ -248,6 +274,16 @@ const NewIncidentScreen = ({ onCancel, onSubmit }) => {
     );
 };
 
+const getSeverityColor = (level) => {
+    switch (level) {
+        case 'Critical': return '#ef4444'; // Red
+        case 'High': return '#f59e0b'; // Amber
+        case 'Medium': return theme.colors.primary; // Greenish/Brand
+        case 'Low': return '#64748b'; // Slate
+        default: return theme.colors.border;
+    }
+};
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -296,6 +332,26 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: 'bold',
         letterSpacing: 1.2,
+    },
+    severityContainer: {
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: 4,
+    },
+    severityBtn: {
+        flex: 1,
+        height: 48,
+        borderRadius: theme.roundness.md,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.02)',
+    },
+    severityBtnText: {
+        color: theme.colors.textMuted,
+        fontSize: 13,
+        fontWeight: '500',
     },
     inputGroup: {
         gap: 8,

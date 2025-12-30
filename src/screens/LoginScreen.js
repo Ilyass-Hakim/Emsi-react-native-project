@@ -7,11 +7,11 @@ import {
     TouchableOpacity,
     KeyboardAvoidingView,
     Platform,
-    SafeAreaView,
-    StatusBar,
     ActivityIndicator,
     ScrollView,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../theme/theme';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -35,12 +35,16 @@ const LoginScreen = ({ onSignUp, onLoginSuccess }) => {
 
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            // onLoginSuccess will be called via auth state listener in App.js
-            // or we can call it here if we want immediate feedback
             onLoginSuccess();
         } catch (err) {
             console.error(err);
-            setError('Invalid email or password');
+            if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+                setError('Invalid email or password. Please check your credentials.');
+            } else if (err.code === 'auth/too-many-requests') {
+                setError('Too many failed attempts. Please try again later.');
+            } else {
+                setError(err.message || 'An unexpected error occurred. Please try again.');
+            }
         } finally {
             setLoading(false);
         }

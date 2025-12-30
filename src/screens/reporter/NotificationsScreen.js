@@ -5,18 +5,21 @@ import {
     Text,
     ScrollView,
     TouchableOpacity,
-    SafeAreaView,
     StatusBar,
     Platform,
     ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { auth } from '../../firebase/config';
 import { useEffect, useState } from 'react';
 import { FirebaseService } from '../../services/firebaseService';
+import useStore from '../../store/useStore';
 
 const NotificationsScreen = ({ onNavPress }) => {
+    const { profile } = useStore();
+    const role = profile?.role || 'Reporter';
     const [activeFilter, setActiveFilter] = useState('All');
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -229,10 +232,22 @@ const NotificationsScreen = ({ onNavPress }) => {
 
             {/* Bottom Nav */}
             <View style={styles.bottomNav}>
-                <NavButton icon="home" label="Home" onPress={() => onNavPress('home')} />
-                <NavButton icon="assignment" label="My Incidents" onPress={() => onNavPress('my-incidents')} />
-                <NavButton icon="notifications" label="Notifications" active onPress={() => onNavPress('notifications')} />
-                <NavButton icon="person" label="Profile" onPress={() => onNavPress('profile')} />
+                {role === 'Reviewer' ? (
+                    <>
+                        <NavButton icon="dashboard" label="Dashboard" onPress={() => onNavPress('reviewer-dashboard')} />
+                        <NavButton icon="warning" label="Incidents" onPress={() => onNavPress('incoming-incidents')} />
+                        <NavButton icon="assignment" label="Assign" onPress={() => { }} />
+                        <NavButton icon="analytics" label="Reports" onPress={() => onNavPress('reports')} />
+                    </>
+                ) : (
+                    <>
+                        <NavButton icon="home" label="Home" onPress={() => onNavPress('home')} />
+                        <NavButton icon="assignment" label="Incidents" onPress={() => onNavPress('my-incidents')} />
+                        <NavButton icon="notifications" label="Notifs" active onPress={() => onNavPress('notifications')} />
+                        <NavButton icon="analytics" label="Reports" onPress={() => onNavPress('reports')} />
+                        <NavButton icon="person" label="Profile" onPress={() => onNavPress('profile')} />
+                    </>
+                )}
             </View>
         </SafeAreaView>
     );

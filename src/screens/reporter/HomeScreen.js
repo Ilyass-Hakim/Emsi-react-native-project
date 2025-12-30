@@ -6,10 +6,10 @@ import {
     ScrollView,
     TouchableOpacity,
     Image,
-    SafeAreaView,
-    StatusBar,
     ActivityIndicator,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { collection, query, orderBy, limit, onSnapshot, where, getDoc, doc } from 'firebase/firestore';
@@ -60,6 +60,7 @@ const HomeScreen = ({ onReportPress, onNavPress }) => {
                     iconBg: 'rgba(255,255,255,0.05)',
                     iconColor: getColorForStatus(data.status),
                     statusColor: getColorForStatus(data.status),
+                    priority: data.priority || 'Medium',
                 });
             });
             setRecentActivity(activities);
@@ -87,6 +88,26 @@ const HomeScreen = ({ onReportPress, onNavPress }) => {
             case 'In Progress': return theme.colors.blue;
             case 'Resolved': return theme.colors.primary;
             default: return theme.colors.textMuted;
+        }
+    };
+
+    const getPriorityColor = (priority) => {
+        switch (priority) {
+            case 'Critical': return '#ef4444';
+            case 'High': return '#f59e0b';
+            case 'Medium': return theme.colors.primary;
+            case 'Low': return '#64748b';
+            default: return theme.colors.textMuted;
+        }
+    };
+
+    const getPriorityIcon = (priority) => {
+        switch (priority) {
+            case 'Critical': return 'warning';
+            case 'High': return 'priority-high';
+            case 'Medium': return 'equalizer';
+            case 'Low': return 'low-priority';
+            default: return 'info';
         }
     };
     return (
@@ -178,6 +199,9 @@ const HomeScreen = ({ onReportPress, onNavPress }) => {
                                 statusColor={activity.statusColor}
                                 iconBg={activity.iconBg}
                                 iconColor={activity.iconColor}
+                                priority={activity.priority}
+                                priorityColor={getPriorityColor(activity.priority)}
+                                priorityIcon={getPriorityIcon(activity.priority)}
                             />
                         ))
                     ) : (
@@ -203,8 +227,13 @@ const HomeScreen = ({ onReportPress, onNavPress }) => {
                 />
                 <NavButton
                     icon="notifications"
-                    label="Notifications"
+                    label="Notifs"
                     onPress={() => onNavPress('notifications')}
+                />
+                <NavButton
+                    icon="analytics"
+                    label="Reports"
+                    onPress={() => onNavPress('reports')}
                 />
                 <NavButton
                     icon="person"
@@ -233,14 +262,23 @@ const QuickChip = ({ icon, label, color, onPress }) => (
     </TouchableOpacity>
 );
 
-const ActivityItem = ({ icon, title, time, status, statusColor, iconBg, iconColor }) => (
+const ActivityItem = ({ icon, title, time, status, statusColor, iconBg, iconColor, priority, priorityColor, priorityIcon }) => (
     <View style={styles.activityItem}>
         <View style={[styles.activityIconWrapper, { backgroundColor: iconBg }]}>
             <MaterialIcons name={icon} size={24} color={iconColor} />
         </View>
         <View style={styles.activityInfo}>
             <Text style={styles.activityTitle} numberOfLines={1}>{title}</Text>
-            <Text style={styles.activityTime}>{time}</Text>
+            <View style={styles.activityMeta}>
+                <Text style={styles.activityTime}>{time}</Text>
+                <Text style={styles.metaDot}>•</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <MaterialIcons name={priorityIcon} size={12} color={priorityColor} style={{ marginRight: 4 }} />
+                    <Text style={[styles.priorityBrief, { color: priorityColor }]}>
+                        {priority}
+                    </Text>
+                </View>
+            </View>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
             <Text style={[styles.statusText, { color: statusColor }]}>{status}</Text>
@@ -483,7 +521,20 @@ const styles = StyleSheet.create({
     activityTime: {
         color: theme.colors.textSecondary,
         fontSize: 12,
+    },
+    activityMeta: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginTop: 2,
+    },
+    metaDot: {
+        color: theme.colors.textMuted,
+        marginHorizontal: 4,
+        fontSize: 10,
+    },
+    priorityBrief: {
+        fontSize: 10,
+        fontWeight: 'bold',
     },
     statusBadge: {
         paddingHorizontal: 10,

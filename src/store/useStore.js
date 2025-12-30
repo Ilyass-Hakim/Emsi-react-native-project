@@ -15,11 +15,15 @@ const useStore = create((set, get) => ({
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // Fetch Profile
-                const profileDoc = await getDoc(doc(db, 'users', user.uid));
-                const profile = profileDoc.exists() ? profileDoc.data() : null;
-
-                set({ user, profile, loading: false, initialized: true });
+                try {
+                    // Fetch Profile
+                    const profileDoc = await getDoc(doc(db, 'users', user.uid));
+                    const profile = profileDoc.exists() ? profileDoc.data() : null;
+                    set({ user, profile, loading: false, initialized: true });
+                } catch (error) {
+                    console.error("Error fetching user profile:", error);
+                    set({ user, profile: null, loading: false, initialized: true });
+                }
             } else {
                 set({ user: null, profile: null, loading: false, initialized: true });
             }

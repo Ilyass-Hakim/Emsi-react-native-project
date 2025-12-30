@@ -7,11 +7,11 @@ import {
     TouchableOpacity,
     KeyboardAvoidingView,
     Platform,
-    SafeAreaView,
     ScrollView,
-    StatusBar,
     ActivityIndicator,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme/theme';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -26,6 +26,7 @@ const RegisterScreen = ({ onLogin }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
+    const [role, setRole] = useState('Reporter');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -54,8 +55,8 @@ const RegisterScreen = ({ onLogin }) => {
             await setDoc(doc(db, 'users', user.uid), {
                 fullName,
                 email,
-                role: 'Reporter',
-                department: 'Not assigned', // Default or could be a dropdown later
+                role,
+                department: 'Not assigned',
                 createdAt: new Date().toISOString(),
             });
 
@@ -182,6 +183,48 @@ const RegisterScreen = ({ onLogin }) => {
                                         size={24}
                                         color={theme.colors.textSecondary}
                                     />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {/* Role Selection */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Register as</Text>
+                            <View style={styles.roleSelectionRow}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.roleChip,
+                                        role === 'Reporter' && styles.roleChipActive
+                                    ]}
+                                    onPress={() => setRole('Reporter')}
+                                >
+                                    <MaterialIcons
+                                        name="person"
+                                        size={18}
+                                        color={role === 'Reporter' ? theme.colors.background : theme.colors.textSecondary}
+                                    />
+                                    <Text style={[
+                                        styles.roleChipText,
+                                        role === 'Reporter' && styles.roleChipTextActive
+                                    ]}>Reporter</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[
+                                        styles.roleChip,
+                                        role === 'Reviewer' && styles.roleChipActive
+                                    ]}
+                                    onPress={() => setRole('Reviewer')}
+                                >
+                                    <MaterialIcons
+                                        name="verified-user"
+                                        size={18}
+                                        color={role === 'Reviewer' ? theme.colors.background : theme.colors.textSecondary}
+                                    />
+                                    <Text style={[
+                                        styles.roleChipText,
+                                        role === 'Reviewer' && styles.roleChipTextActive
+                                    ]}>Reviewer</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -453,6 +496,36 @@ const styles = StyleSheet.create({
     },
     loginLink: {
         color: theme.colors.primary,
+        fontWeight: 'bold',
+    },
+    roleSelectionRow: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 4,
+    },
+    roleChip: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.surface,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        borderRadius: theme.roundness.lg,
+        height: 48,
+        gap: 8,
+    },
+    roleChipActive: {
+        backgroundColor: theme.colors.primary,
+        borderColor: theme.colors.primary,
+    },
+    roleChipText: {
+        color: theme.colors.textSecondary,
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    roleChipTextActive: {
+        color: theme.colors.background,
         fontWeight: 'bold',
     },
 });

@@ -5,18 +5,21 @@ import {
     Text,
     ScrollView,
     TouchableOpacity,
-    SafeAreaView,
-    StatusBar,
     ActivityIndicator,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../../firebase/config';
 
 import { FirebaseService } from '../../services/firebaseService';
+import useStore from '../../store/useStore';
 
 const MyIncidentsScreen = ({ onNavPress, onIncidentPress }) => {
+    const { profile } = useStore();
+    const role = profile?.role || 'Reporter';
     const [activeFilter, setActiveFilter] = useState('All');
     const [incidents, setIncidents] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -60,6 +63,26 @@ const MyIncidentsScreen = ({ onNavPress, onIncidentPress }) => {
             case 'In Progress': return theme.colors.orange;
             case 'Resolved': return theme.colors.primary;
             default: return theme.colors.textMuted;
+        }
+    };
+
+    const getPriorityColor = (priority) => {
+        switch (priority) {
+            case 'Critical': return '#ef4444';
+            case 'High': return '#f59e0b';
+            case 'Medium': return theme.colors.primary;
+            case 'Low': return '#64748b';
+            default: return theme.colors.textMuted;
+        }
+    };
+
+    const getPriorityIcon = (priority) => {
+        switch (priority) {
+            case 'Critical': return 'warning';
+            case 'High': return 'priority-high';
+            case 'Medium': return 'equalizer';
+            case 'Low': return 'low-priority';
+            default: return 'info';
         }
     };
 
@@ -142,16 +165,32 @@ const MyIncidentsScreen = ({ onNavPress, onIncidentPress }) => {
                                     <MaterialIcons name="location-on" size={14} color={theme.colors.textMuted} />
                                     <Text style={styles.locationText}>{incident.location}</Text>
                                 </View>
-                                <View style={[
-                                    styles.statusBadge,
-                                    { backgroundColor: incident.statusColor + '15' }
-                                ]}>
-                                    {incident.status === 'Resolved' && (
-                                        <MaterialIcons name="check" size={12} color={incident.statusColor} style={{ marginRight: 4 }} />
-                                    )}
-                                    <Text style={[styles.statusText, { color: incident.statusColor }]}>
-                                        {incident.status.toUpperCase()}
-                                    </Text>
+                                <View style={styles.badgeRow}>
+                                    <View style={[
+                                        styles.priorityBadge,
+                                        { borderColor: getPriorityColor(incident.priority) + '40' }
+                                    ]}>
+                                        <MaterialIcons
+                                            name={getPriorityIcon(incident.priority)}
+                                            size={12}
+                                            color={getPriorityColor(incident.priority)}
+                                            style={{ marginRight: 4 }}
+                                        />
+                                        <Text style={[styles.priorityText, { color: getPriorityColor(incident.priority) }]}>
+                                            {(incident.priority || 'Medium').toUpperCase()}
+                                        </Text>
+                                    </View>
+                                    <View style={[
+                                        styles.statusBadge,
+                                        { backgroundColor: incident.statusColor + '15' }
+                                    ]}>
+                                        {incident.status === 'Resolved' && (
+                                            <MaterialIcons name="check" size={12} color={incident.statusColor} style={{ marginRight: 4 }} />
+                                        )}
+                                        <Text style={[styles.statusText, { color: incident.statusColor }]}>
+                                            {incident.status.toUpperCase()}
+                                        </Text>
+                                    </View>
                                 </View>
                             </View>
                         </TouchableOpacity>
@@ -177,27 +216,22 @@ const MyIncidentsScreen = ({ onNavPress, onIncidentPress }) => {
 
             {/* Bottom Navigation */}
             <View style={styles.bottomNav}>
-                <NavButton
-                    icon="home"
-                    label="Home"
-                    onPress={() => onNavPress('home')}
-                />
-                <NavButton
-                    icon="assignment"
-                    label="My Incidents"
-                    active
-                    onPress={() => onNavPress('my-incidents')}
-                />
-                <NavButton
-                    icon="notifications"
-                    label="Notifications"
-                    onPress={() => onNavPress('notifications')}
-                />
-                <NavButton
-                    icon="person"
-                    label="Profile"
-                    onPress={() => onNavPress('profile')}
-                />
+                {role === 'Reviewer' ? (
+                    <>
+                        <NavButton icon="dashboard" label="Dashboard" onPress={() => onNavPress('reviewer-dashboard')} />
+                        <NavButton icon="assignment-late" label="Incidents" active onPress={() => onNavPress('incoming-incidents')} />
+                        <NavButton icon="assignment-ind" label="My Tasks" onPress={() => { }} />
+                        <NavButton icon="person" label="Profile" onPress={() => onNavPress('profile')} />
+                    </>
+                ) : (
+                    <>
+                        <NavButton icon="home" label="Home" onPress={() => onNavPress('home')} />
+                        <NavButton icon="assignment" label="Incidents" active onPress={() => onNavPress('my-incidents')} />
+                        <NavButton icon="notifications" label="Notifs" onPress={() => onNavPress('notifications')} />
+                        <NavButton icon="analytics" label="Reports" onPress={() => onNavPress('reports')} />
+                        <NavButton icon="person" label="Profile" onPress={() => onNavPress('profile')} />
+                    </>
+                )}
             </View>
         </SafeAreaView>
     );
@@ -349,6 +383,21 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: 'bold',
         letterSpacing: 0.5,
+    },
+    badgeRow: {
+        flexDirection: 'row',
+        gap: 6,
+        alignItems: 'center',
+    },
+    priorityBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 4,
+        borderWidth: 1,
+    },
+    priorityText: {
+        fontSize: 8,
+        fontWeight: 'bold',
     },
     fab: {
         position: 'absolute',
