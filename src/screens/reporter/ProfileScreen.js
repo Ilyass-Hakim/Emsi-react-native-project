@@ -81,14 +81,12 @@ const ProfileScreen = ({ onLogout, onNavPress, onSave }) => {
                 <View style={styles.profileHeader}>
                     <View style={styles.avatarContainer}>
                         <View style={styles.avatarWrapper}>
-                            <Image
-                                source={{ uri: `https://i.pravatar.cc/200?u=${email}` }}
-                                style={styles.avatar}
+                            <MaterialIcons
+                                name={role === 'Reviewer' ? 'admin-panel-settings' : role === 'Responder' ? 'support-agent' : 'person'}
+                                size={64}
+                                color={theme.colors.textSecondary}
                             />
                         </View>
-                        <TouchableOpacity style={styles.editAvatarBtn}>
-                            <MaterialIcons name="edit" size={16} color={theme.colors.background} />
-                        </TouchableOpacity>
                     </View>
                     <Text style={styles.userName}>{fullName || 'Loading...'}</Text>
                     <View style={styles.roleRow}>
@@ -180,6 +178,11 @@ const ProfileScreen = ({ onLogout, onNavPress, onSave }) => {
                         <NavButton icon="warning" label="Incidents" onPress={() => onNavPress('incoming-incidents')} />
                         <NavButton icon="assignment" label="Assign" onPress={() => { }} />
                         <NavButton icon="analytics" label="Reports" onPress={() => onNavPress('reports')} />
+                    </>
+                ) : role === 'Responder' ? (
+                    <>
+                        <NavButton icon="assignment-ind" label="Assigned" onPress={() => onNavPress('responder-dashboard')} />
+                        <NavButton icon="person" label="Profile" active onPress={() => onNavPress('profile')} />
                     </>
                 ) : (
                     <>
@@ -310,6 +313,8 @@ const styles = StyleSheet.create({
         borderColor: theme.colors.surface,
         overflow: 'hidden',
         backgroundColor: theme.colors.surface,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     avatar: {
         width: '100%',

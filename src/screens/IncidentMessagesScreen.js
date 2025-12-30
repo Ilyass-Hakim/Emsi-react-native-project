@@ -180,7 +180,9 @@ const IncidentMessagesScreen = ({ incidentId, onBack, onNavPress }) => {
                             );
                         }
 
+
                         const isCurrentUser = msg.userId === user.uid;
+                        const roleIcon = msg.userRole === 'Reviewer' ? 'admin-panel-settings' : msg.userRole === 'Responder' ? 'support-agent' : 'person';
 
                         return (
                             <View
@@ -191,11 +193,11 @@ const IncidentMessagesScreen = ({ incidentId, onBack, onNavPress }) => {
                                 ]}
                             >
                                 {!isCurrentUser && (
-                                    <Image
-                                        source={{ uri: `https://i.pravatar.cc/100?u=${msg.userId}` }}
-                                        style={styles.avatar}
-                                    />
+                                    <View style={styles.avatar}>
+                                        <MaterialIcons name={roleIcon} size={18} color={theme.colors.textSecondary} />
+                                    </View>
                                 )}
+
                                 <View style={[styles.messageContent, isCurrentUser && styles.messageContentRight]}>
                                     <View style={[styles.messageHeader, isCurrentUser && styles.messageHeaderRight]}>
                                         <Text style={styles.userName}>{isCurrentUser ? 'Me' : msg.userName}</Text>
@@ -224,10 +226,9 @@ const IncidentMessagesScreen = ({ incidentId, onBack, onNavPress }) => {
                                     </Text>
                                 </View>
                                 {isCurrentUser && (
-                                    <Image
-                                        source={{ uri: `https://i.pravatar.cc/100?u=${msg.userId}` }}
-                                        style={[styles.avatar, styles.avatarOwn]}
-                                    />
+                                    <View style={[styles.avatar, styles.avatarOwn]}>
+                                        <MaterialIcons name={roleIcon} size={18} color={theme.colors.primary} />
+                                    </View>
                                 )}
                             </View>
                         );
@@ -416,6 +417,10 @@ const styles = StyleSheet.create({
         marginRight: 12,
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        overflow: 'hidden',
     },
     avatarOwn: {
         marginRight: 0,
@@ -498,7 +503,7 @@ const styles = StyleSheet.create({
     inputArea: {
         borderTopWidth: 1,
         borderTopColor: 'rgba(255, 255, 255, 0.05)',
-        backgroundColor: theme.colors.background + 'F0',
+        backgroundColor: `${theme.colors.background}F0`,
         paddingTop: 8,
         paddingBottom: 88,
     },

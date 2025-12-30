@@ -264,7 +264,7 @@ const IncomingIncidentsScreen = ({ onNavPress, onIncidentPress }) => {
                         <MaterialIcons name="add" size={32} color={theme.colors.background} />
                     </TouchableOpacity>
                 </View>
-                <NavButton icon="assignment" label="Assign" onPress={() => onNavPress('assignments-list')} />
+                <NavButton icon="assignment" label="Assignments" onPress={() => onNavPress('assignments-list')} />
                 <NavButton icon="analytics" label="Reports" onPress={() => onNavPress('reports')} />
             </View>
         </SafeAreaView>

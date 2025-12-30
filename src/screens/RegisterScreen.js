@@ -226,6 +226,24 @@ const RegisterScreen = ({ onLogin }) => {
                                         role === 'Reviewer' && styles.roleChipTextActive
                                     ]}>Reviewer</Text>
                                 </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[
+                                        styles.roleChip,
+                                        role === 'Responder' && styles.roleChipActive
+                                    ]}
+                                    onPress={() => setRole('Responder')}
+                                >
+                                    <MaterialIcons
+                                        name="medical-services"
+                                        size={18}
+                                        color={role === 'Responder' ? theme.colors.background : theme.colors.textSecondary}
+                                    />
+                                    <Text style={[
+                                        styles.roleChipText,
+                                        role === 'Responder' && styles.roleChipTextActive
+                                    ]}>Responder</Text>
+                                </TouchableOpacity>
                             </View>
                         </View>
 

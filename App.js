@@ -12,6 +12,9 @@ import IncidentHistoryScreen from './src/screens/reporter/IncidentHistoryScreen'
 import ProfileScreen from './src/screens/reporter/ProfileScreen';
 import NotificationsScreen from './src/screens/reporter/NotificationsScreen';
 import ReviewerDashboard from './src/screens/reviewer/ReviewerDashboard';
+import ResponderDashboard from './src/screens/responder/ResponderDashboard';
+import ResponderIncidentDetailsScreen from './src/screens/responder/ResponderIncidentDetailsScreen';
+import UpdateStatusScreen from './src/screens/responder/UpdateStatusScreen';
 import IncomingIncidentsScreen from './src/screens/reviewer/IncomingIncidentsScreen';
 import AssignResponderScreen from './src/screens/reviewer/AssignResponderScreen';
 import ReviewerIncidentDetailsScreen from './src/screens/reviewer/ReviewerIncidentDetailsScreen';
@@ -39,12 +42,16 @@ export default function App() {
         if (isEntryScreen) {
           if (profile.role === 'Reviewer') {
             setCurrentScreen('reviewer-dashboard');
+          } else if (profile.role === 'Responder') {
+            setCurrentScreen('responder-dashboard');
           } else {
             setCurrentScreen('home');
           }
         } else if (profile.role === 'Reviewer' && currentScreen === 'home') {
           setCurrentScreen('reviewer-dashboard');
-        } else if (profile.role !== 'Reviewer' && currentScreen === 'reviewer-dashboard') {
+        } else if (profile.role === 'Responder' && (currentScreen === 'home' || currentScreen === 'reviewer-dashboard')) {
+          setCurrentScreen('responder-dashboard');
+        } else if (profile.role !== 'Reviewer' && profile.role !== 'Responder' && (currentScreen === 'reviewer-dashboard' || currentScreen === 'responder-dashboard')) {
           setCurrentScreen('home');
         }
       } else {
@@ -132,6 +139,14 @@ export default function App() {
               onNavPress={(screen) => setCurrentScreen(screen)}
             />
           );
+        } else if (profile?.role === 'Responder') {
+          return (
+            <ResponderIncidentDetailsScreen
+              incidentId={selectedIncidentId}
+              onBack={() => setCurrentScreen('responder-dashboard')}
+              onNavPress={(screen) => setCurrentScreen(screen)}
+            />
+          );
         } else {
           return (
             <IncidentDetailsScreen
@@ -157,6 +172,24 @@ export default function App() {
               setSelectedIncidentId(id);
               setCurrentScreen('incident-details');
             }}
+          />
+        );
+      case 'responder-dashboard':
+        return (
+          <ResponderDashboard
+            onNavPress={(screen) => setCurrentScreen(screen)}
+            onIncidentPress={(id) => {
+              setSelectedIncidentId(id);
+              setCurrentScreen('incident-details');
+            }}
+          />
+        );
+      case 'update-status':
+        return (
+          <UpdateStatusScreen
+            incidentId={selectedIncidentId}
+            onBack={() => setCurrentScreen('incident-details')}
+            onSave={() => setCurrentScreen('incident-details')}
           />
         );
       case 'assign-responder':

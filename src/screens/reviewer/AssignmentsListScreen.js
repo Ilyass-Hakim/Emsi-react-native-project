@@ -99,8 +99,8 @@ const AssignmentsListScreen = ({ onNavPress, onIncidentPress }) => {
             <View style={styles.bottomNav}>
                 <NavButton icon="dashboard" label="Dashboard" onPress={() => onNavPress('reviewer-dashboard')} />
                 <NavButton icon="assignment-late" label="Incidents" onPress={() => onNavPress('incoming-incidents')} />
-                <NavButton icon="assignment-ind" label="Assignments" active onPress={() => { }} />
-                <NavButton icon="bar-chart" label="Stats" onPress={() => onNavPress('reports')} />
+                <NavButton icon="assignment" label="Assignments" active onPress={() => { }} />
+                <NavButton icon="analytics" label="Reports" onPress={() => onNavPress('reports')} />
             </View>
         </SafeAreaView>
     );

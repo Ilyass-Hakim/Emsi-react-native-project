@@ -57,6 +57,18 @@ export const FirebaseService = {
         }, onError);
     },
 
+    subscribeToResponderAssignments(uid, callback, onError) {
+        const q = query(
+            collection(db, 'incidents'),
+            where('assignedTo', '==', uid),
+            orderBy('createdAt', 'desc')
+        );
+        return onSnapshot(q, (snapshot) => {
+            const incidents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            callback(incidents);
+        }, onError);
+    },
+
     subscribeToAllIncidents(callback, onError) {
         const q = query(
             collection(db, 'incidents'),

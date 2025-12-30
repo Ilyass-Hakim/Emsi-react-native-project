@@ -118,10 +118,7 @@ const HomeScreen = ({ onReportPress, onNavPress }) => {
             <View style={styles.appBar}>
                 <View style={styles.userInfo}>
                     <View style={styles.avatarContainer}>
-                        <Image
-                            source={{ uri: `https://i.pravatar.cc/100?u=${auth.currentUser?.email}` }}
-                            style={styles.avatar}
-                        />
+                        <MaterialIcons name="person" size={24} color={theme.colors.textSecondary} />
                     </View>
                     <View>
                         <Text style={styles.greeting}>Good Morning, {userName}</Text>
@@ -326,6 +323,9 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: 'rgba(19, 236, 91, 0.2)',
         overflow: 'hidden',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
     },
     avatar: {
         width: '100%',

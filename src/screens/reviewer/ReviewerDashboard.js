@@ -114,10 +114,7 @@ const ReviewerDashboard = ({ onNavPress, onIncidentPress }) => {
                     style={styles.profileContainer}
                     onPress={() => onNavPress('profile')}
                 >
-                    <Image
-                        source={{ uri: `https://i.pravatar.cc/100?u=${auth.currentUser?.email}` }}
-                        style={styles.profilePic}
-                    />
+                    <MaterialIcons name="admin-panel-settings" size={28} color="#9dabb9" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Dashboard</Text>
                 <TouchableOpacity style={styles.notiBtn}>
@@ -231,7 +228,7 @@ const ReviewerDashboard = ({ onNavPress, onIncidentPress }) => {
             <View style={styles.bottomNav}>
                 <NavButton icon="dashboard" label="Dashboard" active onPress={() => onNavPress('reviewer-dashboard')} />
                 <NavButton icon="warning" label="Incidents" onPress={() => onNavPress('incoming-incidents')} />
-                <NavButton icon="assignment" label="Assign" onPress={() => onNavPress('assignments-list')} />
+                <NavButton icon="assignment" label="Assignments" onPress={() => onNavPress('assignments-list')} />
                 <NavButton icon="analytics" label="Reports" onPress={() => onNavPress('reports')} />
             </View>
         </SafeAreaView>
@@ -297,6 +294,9 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: '#283039',
         overflow: 'hidden',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#283039',
     },
     profilePic: {
         width: '100%',
