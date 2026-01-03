@@ -27,6 +27,15 @@ export const FirebaseService = {
         await updateDoc(userRef, { ...data, updatedAt: serverTimestamp() });
     },
 
+    subscribeToAllUsers(callback, onError) {
+        const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+        return onSnapshot(q, (snapshot) => {
+            const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            callback(users);
+        }, onError);
+    },
+
+
     // Incident Management
     async createIncident(incidentData) {
         const docRef = await addDoc(collection(db, 'incidents'), {
@@ -462,5 +471,159 @@ export const FirebaseService = {
             topResponders,
             trendData
         };
+    },
+    // Category Management
+    subscribeToCategories(callback, onError) {
+        const q = query(collection(db, 'categories'), orderBy('name', 'asc'));
+        return onSnapshot(q, (snapshot) => {
+            const categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            callback(categories);
+        }, onError);
+    },
+
+    async addCategory(categoryData) {
+        await addDoc(collection(db, 'categories'), {
+            ...categoryData,
+            subcategories: [],
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        });
+    },
+
+    async updateCategory(categoryId, data) {
+        const categoryRef = doc(db, 'categories', categoryId);
+        await updateDoc(categoryRef, {
+            ...data,
+            updatedAt: serverTimestamp()
+        });
+    },
+
+    async addSubcategory(categoryId, subcategoryName) {
+        const categoryRef = doc(db, 'categories', categoryId);
+        const categorySnap = await getDoc(categoryRef);
+
+        if (categorySnap.exists()) {
+            const currentSubcategories = categorySnap.data().subcategories || [];
+            await updateDoc(categoryRef, {
+                subcategories: [...currentSubcategories, { name: subcategoryName, active: true }],
+                updatedAt: serverTimestamp()
+            });
+        }
+    },
+
+    async renameSubcategory(categoryId, oldName, newName) {
+        const categoryRef = doc(db, 'categories', categoryId);
+        const categorySnap = await getDoc(categoryRef);
+
+        if (categorySnap.exists()) {
+            const currentSubcategories = categorySnap.data().subcategories || [];
+            const updatedSubcategories = currentSubcategories.map(sub => {
+                if (sub.name === oldName) {
+                    return { ...sub, name: newName };
+                }
+                return sub;
+            });
+
+            await updateDoc(categoryRef, {
+                subcategories: updatedSubcategories,
+                updatedAt: serverTimestamp()
+            });
+            await updateDoc(categoryRef, {
+                subcategories: updatedSubcategories,
+                updatedAt: serverTimestamp()
+            });
+        }
+    },
+
+    async deleteSubcategory(categoryId, subcategoryName) {
+        const categoryRef = doc(db, 'categories', categoryId);
+        const categorySnap = await getDoc(categoryRef);
+
+        if (categorySnap.exists()) {
+            const currentSubcategories = categorySnap.data().subcategories || [];
+            const updatedSubcategories = currentSubcategories.filter(sub => sub.name !== subcategoryName);
+
+            await updateDoc(categoryRef, {
+                subcategories: updatedSubcategories,
+                updatedAt: serverTimestamp()
+            });
+        }
+    },
+
+    async seedCategories() {
+        const categories = [
+            {
+                name: 'Safety',
+                priority: 'High',
+                icon: 'security',
+                color: 'red',
+                status: 'Active',
+                subcategories: [
+                    { name: 'Slip, Trip & Fall', active: true },
+                    { name: 'Chemical Spill', active: true },
+                    { name: 'Fire Hazard', active: true }
+                ]
+            },
+            {
+                name: 'IT Infrastructure',
+                priority: 'Normal',
+                icon: 'dns',
+                color: 'blue',
+                status: 'Active',
+                subcategories: [
+                    { name: 'Server Outage', active: true },
+                    { name: 'Network Issues', active: true },
+                    { name: 'Software Access', active: true }
+                ]
+            },
+            {
+                name: 'Workplace',
+                priority: 'Critical',
+                icon: 'apartment',
+                color: 'orange',
+                status: 'Active',
+                subcategories: [
+                    { name: 'Lighting Issues', active: true },
+                    { name: 'Desk/Chair Repair', active: true },
+                    { name: 'Meeting Room Equipment', active: true }
+                ]
+            },
+            {
+                name: 'Public Facilities',
+                priority: 'Low',
+                icon: 'public',
+                color: 'gray',
+                status: 'Archived',
+                subcategories: [
+                    { name: 'Restrooms', active: true },
+                    { name: 'Parking Lot', active: true },
+                    { name: 'Water Fountain', active: true }
+                ]
+            }
+        ];
+
+        const existingQuery = query(collection(db, 'categories'));
+        const querySnapshot = await getDocs(existingQuery);
+        const existingCategories = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        for (const cat of categories) {
+            const match = existingCategories.find(c => c.name === cat.name);
+            if (match) {
+                // Check if any default subcategories are missing
+                const currentSubcats = match.subcategories || [];
+                const missingSubcats = cat.subcategories.filter(defSub =>
+                    !currentSubcats.some(currSub => currSub.name === defSub.name)
+                );
+
+                if (missingSubcats.length > 0) {
+                    await this.updateCategory(match.id, {
+                        subcategories: [...currentSubcats, ...missingSubcats]
+                    });
+                }
+            } else {
+                // If doesn't exist, Create
+                await this.addCategory(cat);
+            }
+        }
     }
 };

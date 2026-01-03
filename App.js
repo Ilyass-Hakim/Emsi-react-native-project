@@ -21,6 +21,11 @@ import ReviewerIncidentDetailsScreen from './src/screens/reviewer/ReviewerIncide
 import AssignmentsListScreen from './src/screens/reviewer/AssignmentsListScreen';
 import IncidentMessagesScreen from './src/screens/IncidentMessagesScreen';
 import ReportsScreen from './src/screens/ReportsScreen';
+import UserManagementScreen from './src/screens/admin/UserManagementScreen';
+import RolesPermissionsScreen from './src/screens/admin/RolesPermissionsScreen';
+import CategoriesScreen from './src/screens/admin/CategoriesScreen';
+
+
 
 import useStore from './src/store/useStore';
 
@@ -44,6 +49,8 @@ export default function App() {
             setCurrentScreen('reviewer-dashboard');
           } else if (profile.role === 'Responder') {
             setCurrentScreen('responder-dashboard');
+          } else if (profile.role === 'Admin') {
+            setCurrentScreen('admin-user-management');
           } else {
             setCurrentScreen('home');
           }
@@ -51,8 +58,11 @@ export default function App() {
           setCurrentScreen('reviewer-dashboard');
         } else if (profile.role === 'Responder' && (currentScreen === 'home' || currentScreen === 'reviewer-dashboard')) {
           setCurrentScreen('responder-dashboard');
-        } else if (profile.role !== 'Reviewer' && profile.role !== 'Responder' && (currentScreen === 'reviewer-dashboard' || currentScreen === 'responder-dashboard')) {
+        } else if (profile.role === 'Admin' && currentScreen !== 'admin-user-management' && currentScreen !== 'admin-roles-permissions' && currentScreen !== 'admin-categories') {
+          setCurrentScreen('admin-user-management');
+        } else if (profile.role !== 'Reviewer' && profile.role !== 'Responder' && profile.role !== 'Admin' && (currentScreen === 'reviewer-dashboard' || currentScreen === 'responder-dashboard' || currentScreen === 'admin-user-management')) {
           setCurrentScreen('home');
+
         }
       } else {
         // Authenticated but no profile (e.g., deleted document or incomplete registration)
@@ -227,6 +237,25 @@ export default function App() {
             onNavPress={(screen) => setCurrentScreen(screen)}
           />
         );
+      case 'admin-user-management':
+        return (
+          <UserManagementScreen
+            onNavPress={(screen) => setCurrentScreen(screen)}
+          />
+        );
+      case 'admin-roles-permissions':
+        return (
+          <RolesPermissionsScreen
+            onNavPress={(screen) => setCurrentScreen(screen)}
+          />
+        );
+      case 'admin-categories':
+        return (
+          <CategoriesScreen
+            onNavPress={(screen) => setCurrentScreen(screen)}
+          />
+        );
+
       default:
         return (
           <LoginScreen

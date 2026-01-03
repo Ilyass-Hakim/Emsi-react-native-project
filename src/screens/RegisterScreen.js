@@ -244,7 +244,26 @@ const RegisterScreen = ({ onLogin }) => {
                                         role === 'Responder' && styles.roleChipTextActive
                                     ]}>Responder</Text>
                                 </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[
+                                        styles.roleChip,
+                                        role === 'Admin' && styles.roleChipActive
+                                    ]}
+                                    onPress={() => setRole('Admin')}
+                                >
+                                    <MaterialIcons
+                                        name="admin-panel-settings"
+                                        size={18}
+                                        color={role === 'Admin' ? theme.colors.background : theme.colors.textSecondary}
+                                    />
+                                    <Text style={[
+                                        styles.roleChipText,
+                                        role === 'Admin' && styles.roleChipTextActive
+                                    ]}>Admin</Text>
+                                </TouchableOpacity>
                             </View>
+
                         </View>
 
                         {/* Terms Checkbox */}
@@ -518,11 +537,12 @@ const styles = StyleSheet.create({
     },
     roleSelectionRow: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
         gap: 12,
         marginTop: 4,
     },
     roleChip: {
-        flex: 1,
+        width: '48%',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
