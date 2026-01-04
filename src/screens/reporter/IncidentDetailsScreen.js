@@ -195,18 +195,17 @@ const IncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
                         <View style={styles.section}>
                             <Text style={styles.sectionLabel}>MEDIA</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaScroll}>
-                                <Image
-                                    source={{ uri: 'https://images.unsplash.com/photo-1558491230-c605bcad001d?q=80&w=200' }}
-                                    style={styles.mediaThumb}
-                                />
-                                <Image
-                                    source={{ uri: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=200' }}
-                                    style={styles.mediaThumb}
-                                />
-                                <TouchableOpacity style={styles.addMediaThumb}>
-                                    <MaterialIcons name="add-a-photo" size={24} color={theme.colors.textMuted} />
-                                    <Text style={styles.addMediaText}>Add Photo</Text>
-                                </TouchableOpacity>
+                                {incident.images && incident.images.length > 0 ? (
+                                    incident.images.map((imgUrl, index) => (
+                                        <Image
+                                            key={index}
+                                            source={{ uri: imgUrl }}
+                                            style={styles.mediaThumb}
+                                        />
+                                    ))
+                                ) : (
+                                    <Text style={{ color: theme.colors.textMuted, fontStyle: 'italic', marginLeft: 4 }}>No media attached</Text>
+                                )}
                             </ScrollView>
                         </View>
 
@@ -280,6 +279,8 @@ const IncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
                                             time={item.formattedTime}
                                             content={item.note}
                                             user={item.user}
+                                            evidenceUrl={item.evidenceUrl}
+                                            type={item.type}
                                             isUpdate={item.user !== 'System'}
                                             isStatusChange={item.type === 'status_change'}
                                             isFirst={index === 0}
@@ -322,7 +323,7 @@ const IncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
             <View style={styles.bottomNav}>
                 <NavButton icon="home" label="Home" onPress={() => onNavPress('home')} />
                 <NavButton icon="assignment-late" label="My Incidents" active onPress={() => onNavPress('my-incidents')} />
-                <NavButton icon="notifications" label="Notifications" onPress={() => onNavPress('notifications')} />
+                <NavButton icon="history" label="History" onPress={() => onNavPress('incident-history')} />
                 <NavButton icon="person" label="Profile" onPress={() => onNavPress('profile')} />
             </View>
         </SafeAreaView>
@@ -341,23 +342,37 @@ const LocationItem = ({ icon, label, value, iconBg, iconColor }) => (
     </View>
 );
 
-const TimelineItem = ({ time, content, user, isUpdate, isStatusChange, isFirst, isLast }) => (
+const TimelineItem = ({ time, content, user, evidenceUrl, type, isUpdate, isStatusChange, isFirst, isLast }) => (
     <View style={styles.timelineItem}>
         <View style={styles.timelineLeft}>
             <View style={[styles.timelineLine, isFirst && { top: 12 }, isLast && { bottom: '100%', height: 12 }]} />
-            <View style={[styles.timelineDot, isUpdate && { backgroundColor: theme.colors.primary }]} />
+            <View style={[
+                styles.timelineDot,
+                (isUpdate || type === 'evidence') && { backgroundColor: theme.colors.primary }
+            ]} />
         </View>
         <View style={styles.timelineRight}>
             <Text style={styles.timelineTime}>{time}</Text>
-            <View style={[styles.timelineContent, isUpdate && styles.updateContent]}>
+            <View style={[styles.timelineContent, (isUpdate || type === 'evidence') && styles.updateContent]}>
                 {isStatusChange ? (
                     <Text style={styles.timelineText}>
                         Status changed to <Text style={{ color: theme.colors.primary, fontWeight: 'bold' }}>In Progress</Text>
                     </Text>
+                ) : type === 'evidence' ? (
+                    <Text style={[styles.timelineText, { fontWeight: 'bold', marginBottom: 4 }]}>Proof Uploaded</Text>
                 ) : (
                     <Text style={styles.timelineText}>{content}</Text>
                 )}
-                {user && <Text style={[styles.timelineUser, isUpdate && { color: theme.colors.primary }]}>{user}</Text>}
+
+                {evidenceUrl && (
+                    <Image
+                        source={{ uri: evidenceUrl }}
+                        style={{ width: '100%', height: 150, borderRadius: 8, marginTop: 8 }}
+                        resizeMode="cover"
+                    />
+                )}
+
+                {user && <Text style={[styles.timelineUser, (isUpdate || type === 'evidence') && { color: theme.colors.primary }]}>{user}</Text>}
             </View>
         </View>
     </View>

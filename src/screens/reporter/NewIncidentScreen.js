@@ -16,6 +16,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../../firebase/config';
+import * as ImagePicker from 'expo-image-picker';
+import { SupabaseService } from '../../services/supabaseService';
 
 import useStore from '../../store/useStore';
 import { FirebaseService } from '../../services/firebaseService';
@@ -30,6 +32,7 @@ const NewIncidentScreen = ({ onCancel, onSubmit }) => {
     const [area, setArea] = useState('');
     const [severity, setSeverity] = useState('Medium');
     const [loading, setLoading] = useState(false);
+    const [images, setImages] = useState([]);
 
     const handleSubmit = async () => {
         if (!title || !description || !category) {
@@ -49,6 +52,7 @@ const NewIncidentScreen = ({ onCancel, onSubmit }) => {
                 area: area || 'Not specified',
                 reporterId: auth.currentUser?.uid,
                 reporterName: profile?.fullName || 'Unknown Reporter',
+                images,
             });
 
             alert('Incident reported successfully!');
@@ -56,6 +60,55 @@ const NewIncidentScreen = ({ onCancel, onSubmit }) => {
         } catch (error) {
             console.error("Error submitting incident:", error);
             alert('Failed to submit incident. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const pickImage = async () => {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+            alert('Permission required to access photos.');
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 0.7,
+            allowsEditing: true,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+            await uploadAndAdd(result.assets[0].uri);
+        }
+    };
+
+    const takePhoto = async () => {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+            alert('Camera permission is required to take photos.');
+            return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+            quality: 0.7,
+            allowsEditing: true,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+            await uploadAndAdd(result.assets[0].uri);
+        }
+    };
+
+    const uploadAndAdd = async (uri) => {
+        try {
+            setLoading(true);
+            const fileName = uri.split('/').pop();
+            const publicUrl = await SupabaseService.uploadImageAsync(uri, fileName);
+            setImages(prev => [...prev, publicUrl]);
+        } catch (err) {
+            console.error("Upload error:", err);
+            alert(`Failed to upload image: ${err.message || JSON.stringify(err)}`);
         } finally {
             setLoading(false);
         }
@@ -221,32 +274,31 @@ const NewIncidentScreen = ({ onCancel, onSubmit }) => {
                     </View>
 
                     <View style={styles.evidenceGrid}>
-                        <TouchableOpacity style={styles.addMediaBtn}>
+                        <TouchableOpacity style={styles.addMediaBtn} onPress={pickImage}>
                             <View style={styles.addIconBg}>
                                 <MaterialIcons name="add" size={24} color={theme.colors.textMuted} />
                             </View>
-                            <Text style={styles.addMediaText}>Add Media</Text>
+                            <Text style={styles.addMediaText}>Gallery</Text>
                         </TouchableOpacity>
 
-                        <View style={styles.mediaPreview}>
-                            <Image
-                                source={{ uri: 'https://images.unsplash.com/photo-1542013936693-88463832181d?q=80&w=200' }}
-                                style={styles.mediaImage}
-                            />
-                            <TouchableOpacity style={styles.removeMediaBtn}>
-                                <MaterialIcons name="close" size={14} color="#fff" />
-                            </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity style={styles.addMediaBtn} onPress={takePhoto}>
+                            <View style={styles.addIconBg}>
+                                <MaterialIcons name="photo-camera" size={24} color={theme.colors.textMuted} />
+                            </View>
+                            <Text style={styles.addMediaText}>Camera</Text>
+                        </TouchableOpacity>
 
-                        <View style={styles.mediaPreview}>
-                            <Image
-                                source={{ uri: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=200' }}
-                                style={styles.mediaImage}
-                            />
-                            <TouchableOpacity style={styles.removeMediaBtn}>
-                                <MaterialIcons name="close" size={14} color="#fff" />
-                            </TouchableOpacity>
-                        </View>
+                        {images.map((uri, idx) => (
+                            <View key={idx} style={styles.mediaPreview}>
+                                <Image source={{ uri }} style={styles.mediaImage} />
+                                <TouchableOpacity
+                                    style={styles.removeMediaBtn}
+                                    onPress={() => setImages(prev => prev.filter((_, i) => i !== idx))}
+                                >
+                                    <MaterialIcons name="close" size={14} color="#fff" />
+                                </TouchableOpacity>
+                            </View>
+                        ))}
                     </View>
                 </View>
 
@@ -415,11 +467,12 @@ const styles = StyleSheet.create({
     },
     evidenceGrid: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
         gap: 12,
     },
     addMediaBtn: {
-        flex: 1,
-        aspectSquare: 1,
+        width: 100,
+        height: 100,
         borderRadius: theme.roundness.xl,
         borderWidth: 2,
         borderStyle: 'dashed',
@@ -464,7 +517,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
-        
+
     },
     footer: {
         position: 'absolute',

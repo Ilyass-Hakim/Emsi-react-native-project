@@ -18,7 +18,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 
-const RegisterScreen = ({ onLogin }) => {
+const RegisterScreen = ({ onLogin, onBack }) => {
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -76,7 +76,7 @@ const RegisterScreen = ({ onLogin }) => {
         <SafeAreaView style={styles.container}>
             <StatusBar style="light" />
             <View style={styles.headerNav}>
-                <TouchableOpacity style={styles.backButton} onPress={onLogin}>
+                <TouchableOpacity style={styles.backButton} onPress={onBack || onLogin}>
                     <MaterialIcons name="arrow-back" size={24} color={theme.colors.text} />
                 </TouchableOpacity>
             </View>
@@ -244,7 +244,26 @@ const RegisterScreen = ({ onLogin }) => {
                                         role === 'Responder' && styles.roleChipTextActive
                                     ]}>Responder</Text>
                                 </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[
+                                        styles.roleChip,
+                                        role === 'Admin' && styles.roleChipActive
+                                    ]}
+                                    onPress={() => setRole('Admin')}
+                                >
+                                    <MaterialIcons
+                                        name="admin-panel-settings"
+                                        size={18}
+                                        color={role === 'Admin' ? theme.colors.background : theme.colors.textSecondary}
+                                    />
+                                    <Text style={[
+                                        styles.roleChipText,
+                                        role === 'Admin' && styles.roleChipTextActive
+                                    ]}>Admin</Text>
+                                </TouchableOpacity>
                             </View>
+
                         </View>
 
                         {/* Terms Checkbox */}
@@ -518,11 +537,12 @@ const styles = StyleSheet.create({
     },
     roleSelectionRow: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
         gap: 12,
         marginTop: 4,
     },
     roleChip: {
-        flex: 1,
+        width: '48%',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',

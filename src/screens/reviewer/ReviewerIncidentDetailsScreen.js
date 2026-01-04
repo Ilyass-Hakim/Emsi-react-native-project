@@ -273,14 +273,27 @@ const ReviewerIncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
                             <View key={index} style={styles.timelineItem}>
                                 <View style={[
                                     styles.timelineDot,
-                                    { backgroundColor: index === 0 ? theme.colors.primary : theme.colors.textMuted }
+                                    {
+                                        backgroundColor: item.type === 'evidence' ? theme.colors.primary :
+                                            index === 0 ? theme.colors.primary : theme.colors.textMuted,
+                                        borderColor: item.type === 'evidence' ? theme.colors.primary : 'transparent',
+                                    }
                                 ]} />
                                 <View style={styles.timelineContent}>
                                     <View style={styles.timelineHeader}>
-                                        <Text style={styles.timelineTitle}>{item.status}</Text>
+                                        <Text style={styles.timelineTitle}>
+                                            {item.type === 'evidence' ? 'Proof Uploaded' : item.status}
+                                        </Text>
                                         <Text style={styles.timelineTime}>{item.formattedTime}</Text>
                                     </View>
                                     <Text style={styles.timelineNote}>{item.note}</Text>
+                                    {item.evidenceUrl && (
+                                        <Image
+                                            source={{ uri: item.evidenceUrl }}
+                                            style={{ width: '100%', height: 150, borderRadius: 8, marginTop: 8, marginBottom: 4 }}
+                                            resizeMode="cover"
+                                        />
+                                    )}
                                     {item.user && <Text style={styles.timelineUser}>by {item.user}</Text>}
                                 </View>
                             </View>
@@ -292,7 +305,7 @@ const ReviewerIncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
             </ScrollView>
 
             {/* Sticky Footer Actions */}
-            {incident.status !== 'Resolved' && incident.status !== 'Rejected' && (
+            {incident.status !== 'Resolved' && incident.status !== 'Rejected' && incident.status !== 'Approved' && (
                 <View style={styles.footerActions}>
                     <TouchableOpacity
                         style={styles.rejectBtn}

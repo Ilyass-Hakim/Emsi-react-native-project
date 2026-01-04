@@ -15,7 +15,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { FirebaseService } from '../../services/firebaseService';
+import { SupabaseService } from '../../services/supabaseService';
 import { auth } from '../../firebase/config';
+import * as ImagePicker from 'expo-image-picker';
 
 const ResponderIncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
     const [incident, setIncident] = useState(null);
@@ -54,14 +56,49 @@ const ResponderIncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
         }
     };
 
-    const handleUploadProof = () => {
-        Alert.alert("Upload Proof", "Camera/Gallery integration would go here.");
+    const handleUploadProof = async () => {
+        try {
+            const permission = await ImagePicker.requestCameraPermissionsAsync();
+            if (!permission.granted) {
+                Alert.alert('Permission Denied', 'Camera permission is required to take photos.');
+                return;
+            }
+
+            const result = await ImagePicker.launchCameraAsync({
+                quality: 0.7,
+                allowsEditing: true, // This allows the user to crop/confirm the photo, fixing the "white" image if it was a capture issue
+            });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                const uri = result.assets[0].uri;
+                const fileName = uri.split('/').pop();
+
+                // Show blocking loader
+                setLoading(true);
+
+                const publicUrl = await SupabaseService.uploadImageAsync(uri, fileName);
+
+                await FirebaseService.addIncidentEvidence(incidentId, publicUrl, auth.currentUser?.email);
+
+                // Refresh data
+                const updatedData = await FirebaseService.getIncident(incidentId);
+                setIncident(updatedData);
+
+                Alert.alert("Success", "Proof uploaded successfully!");
+            }
+        } catch (error) {
+            console.error(error);
+            Alert.alert("Error", "Failed to upload proof.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={theme.colors.primary} />
+                <Text style={{ marginTop: 10, color: theme.colors.textSecondary }}>Processing...</Text>
             </View>
         );
     }
@@ -127,7 +164,7 @@ const ResponderIncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
                         {/* Thumbnail */}
                         <View style={styles.thumbnailContainer}>
                             <Image
-                                source={{ uri: 'https://images.unsplash.com/photo-1542013936693-88463832181d?q=80&w=200' }}
+                                source={{ uri: (incident.images && incident.images.length > 0) ? incident.images[0] : 'https://placehold.co/200' }}
                                 style={styles.thumbnail}
                             />
                         </View>
@@ -181,37 +218,49 @@ const ResponderIncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
                         {/* Vertical Line */}
                         <View style={styles.timelineLine} />
 
-                        {assignedDate && (
-                            <View style={styles.timelineItem}>
-                                <View style={[styles.timelineIconContainer, { backgroundColor: theme.colors.primary }]}>
-                                    <MaterialIcons name="build" size={20} color={theme.colors.background} />
+                        {incident.statusHistory && [...incident.statusHistory].reverse().map((item, index) => (
+                            <View key={index} style={styles.timelineItem}>
+                                <View style={[styles.timelineIconContainer, {
+                                    backgroundColor: item.type === 'evidence' ? theme.colors.primary :
+                                        item.status === 'Resolved' ? '#10b981' :
+                                            theme.colors.surfaceHighlight
+                                }]}>
+                                    <MaterialIcons
+                                        name={
+                                            item.type === 'evidence' ? "image" :
+                                                item.status === 'Resolved' ? "check-circle" :
+                                                    item.status === 'In Progress' ? "build" :
+                                                        "update"
+                                        }
+                                        size={20}
+                                        color={item.type === 'evidence' || item.status === 'Resolved' ? theme.colors.background : theme.colors.text}
+                                    />
                                 </View>
                                 <View style={styles.timelineContent}>
                                     <View style={styles.timelineHeader}>
-                                        <Text style={styles.timelineTitle}>Assigned to You</Text>
-                                        <Text style={styles.timelineTime}>10m ago</Text>
+                                        <Text style={styles.timelineTitle}>
+                                            {item.type === 'evidence' ? 'Proof Uploaded' : item.status}
+                                        </Text>
+                                        <Text style={styles.timelineTime}>
+                                            {item.timestamp ? new Date(item.timestamp).toLocaleDateString() + ' ' + new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                        </Text>
                                     </View>
-                                    <Text style={styles.timelineDesc}>
-                                        You have been assigned to this incident.
+                                    {item.note && (
+                                        <Text style={styles.timelineDesc}>{item.note}</Text>
+                                    )}
+                                    {item.evidenceUrl && (
+                                        <Image
+                                            source={{ uri: item.evidenceUrl }}
+                                            style={{ width: '100%', height: 150, borderRadius: 8, marginTop: 8 }}
+                                            resizeMode="cover"
+                                        />
+                                    )}
+                                    <Text style={[styles.timelineDesc, { fontSize: 12, marginTop: 4, opacity: 0.7 }]}>
+                                        by {item.user}
                                     </Text>
                                 </View>
                             </View>
-                        )}
-
-                        <View style={styles.timelineItem}>
-                            <View style={[styles.timelineIconContainer, { backgroundColor: theme.colors.surfaceHighlight }]}>
-                                <MaterialIcons name="admin-panel-settings" size={20} color={theme.colors.text} />
-                            </View>
-                            <View style={styles.timelineContent}>
-                                <View style={styles.timelineHeader}>
-                                    <Text style={styles.timelineTitle}>Reported</Text>
-                                    <Text style={styles.timelineTime}>2h ago</Text>
-                                </View>
-                                <View style={styles.noteBox}>
-                                    <Text style={styles.noteText}>"{incident.description.slice(0, 50)}..."</Text>
-                                </View>
-                            </View>
-                        </View>
+                        ))}
                     </View>
                 </View>
             </ScrollView>

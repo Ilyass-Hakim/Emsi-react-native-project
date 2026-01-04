@@ -17,13 +17,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { FirebaseService } from '../../services/firebaseService';
+import { SupabaseService } from '../../services/supabaseService';
 import { auth } from '../../firebase/config';
+import * as ImagePicker from 'expo-image-picker';
 
 const UpdateStatusScreen = ({ incidentId, onBack, onSave }) => {
     const [status, setStatus] = useState('In Progress');
     const [note, setNote] = useState('');
     const [loading, setLoading] = useState(false);
     const [incident, setIncident] = useState(null);
+    const [image, setImage] = useState(null); // Local URI for preview
+    const [uploadedUrl, setUploadedUrl] = useState(null); // Public URL from Supabase
 
     React.useEffect(() => {
         if (incidentId) {
@@ -38,10 +42,52 @@ const UpdateStatusScreen = ({ incidentId, onBack, onSave }) => {
         }
     }, [incidentId]);
 
+    const handlePickImage = async () => {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+            Alert.alert('Permission Denied', 'Camera permission is required to take photos.');
+            return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+            quality: 0.7,
+            allowsEditing: true,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+            const uri = result.assets[0].uri;
+            setImage(uri); // Show local preview
+            await uploadImage(uri);
+        }
+    };
+
+    const uploadImage = async (uri) => {
+        try {
+            setLoading(true);
+            const fileName = uri.split('/').pop();
+            console.log('Uploading image...', fileName);
+            const publicUrl = await SupabaseService.uploadImageAsync(uri, fileName);
+            setUploadedUrl(publicUrl);
+            console.log('Image uploaded successfully:', publicUrl);
+        } catch (error) {
+            console.error('Failed to upload image:', error);
+            Alert.alert('Upload Failed', `Could not upload image: ${error.message}`);
+            setImage(null); // Reset preview on failure
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSave = async () => {
         setLoading(true);
         try {
-            await FirebaseService.updateIncidentStatus(incidentId, status, note, auth.currentUser?.email);
+            await FirebaseService.updateIncidentStatus(
+                incidentId,
+                status,
+                note,
+                auth.currentUser?.email,
+                uploadedUrl // Pass the image URL if uploaded
+            );
             Alert.alert("Success", "Status updated successfully", [
                 { text: "OK", onPress: onSave }
             ]);
@@ -163,31 +209,37 @@ const UpdateStatusScreen = ({ incidentId, onBack, onSave }) => {
                             maxLength={500}
                         />
                         <View style={styles.noteFooter}>
-                            <TouchableOpacity style={styles.addPhotoBtn}>
-                                <MaterialIcons name="add-a-photo" size={20} color={theme.colors.textSecondary} />
-                                <Text style={styles.addPhotoText}>Add Photo</Text>
+                            <TouchableOpacity style={styles.addPhotoBtn} onPress={handlePickImage} disabled={loading}>
+                                <MaterialIcons name={image ? "photo" : "add-a-photo"} size={20} color={image ? theme.colors.primary : theme.colors.textSecondary} />
+                                <Text style={[styles.addPhotoText, image && { color: theme.colors.primary }]}>
+                                    {image ? "Change Photo" : "Add Proof"}
+                                </Text>
                             </TouchableOpacity>
                             <Text style={styles.charCount}>{note.length}/500</Text>
                         </View>
                     </View>
+
+                    {/* Image Preview */}
+                    {image && (
+                        <View style={styles.previewContainer}>
+                            <Image source={{ uri: image }} style={styles.previewImage} />
+                            <TouchableOpacity
+                                style={styles.removePreviewBtn}
+                                onPress={() => { setImage(null); setUploadedUrl(null); }}
+                            >
+                                <MaterialIcons name="close" size={20} color="white" />
+                            </TouchableOpacity>
+                            {loading && (
+                                <View style={styles.uploadingOverlay}>
+                                    <ActivityIndicator color={theme.colors.primary} />
+                                </View>
+                            )}
+                        </View>
+                    )}
                 </ScrollView>
             </KeyboardAvoidingView>
 
-            {/* Bottom Nav Placeholder (Visual only as requested in HTML design, functional not needed here since it's a modal-like screen) */}
-            <View style={styles.bottomNav}>
-                <View style={styles.navItem}>
-                    <View style={[styles.navIconWrapper, { backgroundColor: 'rgba(19, 236, 91, 0.1)' }]}>
-                        <MaterialIcons name="assignment" size={24} color={theme.colors.primary} />
-                    </View>
-                    <Text style={[styles.navLabel, { color: theme.colors.primary }]}>Assigned</Text>
-                </View>
-                <View style={styles.navItem}>
-                    <View style={styles.navIconWrapper}>
-                        <MaterialIcons name="person" size={24} color={theme.colors.textMuted} />
-                    </View>
-                    <Text style={styles.navLabel}>Profile</Text>
-                </View>
-            </View>
+            {/* Bottom Nav Placeholder - Removed to simplify modal */}
 
         </SafeAreaView>
     );
@@ -366,34 +418,32 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: theme.colors.textMuted,
     },
-    bottomNav: {
-        position: 'absolute',
-        bottom: 0,
+    previewContainer: {
+        marginHorizontal: 16,
+        marginTop: 16,
+        borderRadius: 8,
+        overflow: 'hidden',
+        height: 200,
+        backgroundColor: theme.colors.surfaceHighlight,
+    },
+    previewImage: {
         width: '100%',
-        backgroundColor: theme.colors.background,
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.1)',
-        paddingBottom: 20,
-        paddingTop: 8,
-        paddingHorizontal: 16,
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        height: 80,
+        height: '100%',
+        resizeMode: 'cover',
     },
-    navItem: {
-        alignItems: 'center',
+    removePreviewBtn: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        borderRadius: 12,
+        padding: 4,
+    },
+    uploadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.4)',
         justifyContent: 'center',
-        gap: 4,
-    },
-    navIconWrapper: {
-        paddingHorizontal: 16,
-        paddingVertical: 4,
-        borderRadius: 20,
-    },
-    navLabel: {
-        fontSize: 11,
-        fontWeight: '500',
-        color: theme.colors.textMuted,
+        alignItems: 'center',
     },
 });
 

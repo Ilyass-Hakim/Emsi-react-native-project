@@ -226,9 +226,9 @@ const HomeScreen = ({ onReportPress, onNavPress }) => {
                     onPress={() => onNavPress('my-incidents')}
                 />
                 <NavButton
-                    icon="notifications"
-                    label="Notifs"
-                    onPress={() => onNavPress('notifications')}
+                    icon="history"
+                    label="History"
+                    onPress={() => onNavPress('incident-history')}
                 />
                 <NavButton
                     icon="person"

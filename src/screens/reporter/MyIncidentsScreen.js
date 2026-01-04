@@ -227,7 +227,7 @@ const MyIncidentsScreen = ({ onNavPress, onIncidentPress }) => {
                     <>
                         <NavButton icon="home" label="Home" onPress={() => onNavPress('home')} />
                         <NavButton icon="assignment" label="Incidents" active onPress={() => onNavPress('my-incidents')} />
-                        <NavButton icon="notifications" label="Notifs" onPress={() => onNavPress('notifications')} />
+                        <NavButton icon="history" label="History" onPress={() => onNavPress('incident-history')} />
                         <NavButton icon="person" label="Profile" onPress={() => onNavPress('profile')} />
                     </>
                 )}

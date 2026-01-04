@@ -10,6 +10,7 @@ import {
     Switch,
     Platform,
     ActivityIndicator,
+    Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -61,7 +62,18 @@ const ProfileScreen = ({ onLogout, onNavPress, onSave }) => {
 
             {/* Header */}
             <View style={styles.header}>
-                <View style={{ width: 48 }} />
+                <TouchableOpacity
+                    onPress={() => {
+                        if (profile?.role === 'Admin') {
+                            onNavPress('admin-user-management');
+                        } else {
+                            onNavPress('home');
+                        }
+                    }}
+                    style={styles.backButton}
+                >
+                    <MaterialIcons name="arrow-back" size={24} color="#fff" />
+                </TouchableOpacity>
                 <Text style={styles.headerTitle}>Profile</Text>
                 <TouchableOpacity onPress={onSave} style={styles.saveBtn}>
                     <Text style={styles.saveBtnText}>Save</Text>
@@ -160,6 +172,38 @@ const ProfileScreen = ({ onLogout, onNavPress, onSave }) => {
 
                 {/* Logout button */}
                 <View style={styles.section}>
+                    <TouchableOpacity
+                        style={[styles.logoutBtn, { borderColor: theme.colors.primary, marginBottom: 16 }]}
+                        onPress={() => {
+                            Alert.alert(
+                                'Reset Data',
+                                'Are you sure you want to delete ALL incidents? This action cannot be undone.',
+                                [
+                                    { text: 'Cancel', style: 'cancel' },
+                                    {
+                                        text: 'Delete All',
+                                        style: 'destructive',
+                                        onPress: async () => {
+                                            setLoading(true);
+                                            try {
+                                                await FirebaseService.clearAllIncidents();
+                                                alert('All incidents cleared.');
+                                            } catch (err) {
+                                                console.error(err);
+                                                alert('Failed to clear data.');
+                                            } finally {
+                                                setLoading(false);
+                                            }
+                                        }
+                                    }
+                                ]
+                            );
+                        }}
+                    >
+                        <MaterialIcons name="delete-forever" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
+                        <Text style={[styles.logoutBtnText, { color: theme.colors.primary }]}>Reset Incidents (Dev)</Text>
+                    </TouchableOpacity>
+
                     <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
                         <MaterialIcons name="logout" size={20} color="#f87171" style={{ marginRight: 8 }} />
                         <Text style={styles.logoutBtnText}>Log Out</Text>
@@ -170,29 +214,31 @@ const ProfileScreen = ({ onLogout, onNavPress, onSave }) => {
                 <View style={{ height: 100 }} />
             </ScrollView>
 
-            {/* Bottom Nav */}
-            <View style={styles.bottomNav}>
-                {role === 'Reviewer' ? (
-                    <>
-                        <NavButton icon="dashboard" label="Dashboard" onPress={() => onNavPress('reviewer-dashboard')} />
-                        <NavButton icon="warning" label="Incidents" onPress={() => onNavPress('incoming-incidents')} />
-                        <NavButton icon="assignment" label="Assign" onPress={() => { }} />
-                        <NavButton icon="analytics" label="Reports" onPress={() => onNavPress('reports')} />
-                    </>
-                ) : role === 'Responder' ? (
-                    <>
-                        <NavButton icon="assignment-ind" label="Assigned" onPress={() => onNavPress('responder-dashboard')} />
-                        <NavButton icon="person" label="Profile" active onPress={() => onNavPress('profile')} />
-                    </>
-                ) : (
-                    <>
-                        <NavButton icon="home" label="Home" onPress={() => onNavPress('home')} />
-                        <NavButton icon="assignment" label="Incidents" onPress={() => onNavPress('my-incidents')} />
-                        <NavButton icon="notifications" label="Notifs" onPress={() => onNavPress('notifications')} />
-                        <NavButton icon="person" label="Profile" active onPress={() => onNavPress('profile')} />
-                    </>
-                )}
-            </View>
+            {/* Bottom Nav - hidden for Admin */}
+            {role !== 'Admin' && (
+                <View style={styles.bottomNav}>
+                    {role === 'Reviewer' ? (
+                        <>
+                            <NavButton icon="dashboard" label="Dashboard" onPress={() => onNavPress('reviewer-dashboard')} />
+                            <NavButton icon="warning" label="Incidents" onPress={() => onNavPress('incoming-incidents')} />
+                            <NavButton icon="assignment" label="Assign" onPress={() => { }} />
+                            <NavButton icon="analytics" label="Reports" onPress={() => onNavPress('reports')} />
+                        </>
+                    ) : role === 'Responder' ? (
+                        <>
+                            <NavButton icon="assignment-ind" label="Assigned" onPress={() => onNavPress('responder-dashboard')} />
+                            <NavButton icon="person" label="Profile" active onPress={() => onNavPress('profile')} />
+                        </>
+                    ) : (
+                        <>
+                            <NavButton icon="home" label="Home" onPress={() => onNavPress('home')} />
+                            <NavButton icon="assignment" label="Incidents" onPress={() => onNavPress('my-incidents')} />
+                            <NavButton icon="history" label="History" onPress={() => onNavPress('incident-history')} />
+                            <NavButton icon="person" label="Profile" active onPress={() => onNavPress('profile')} />
+                        </>
+                    )}
+                </View>
+            )}
         </SafeAreaView>
     );
 };
@@ -293,6 +339,11 @@ const styles = StyleSheet.create({
         color: theme.colors.primary,
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    backButton: {
+        padding: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     scrollContent: {
         paddingBottom: 20,
