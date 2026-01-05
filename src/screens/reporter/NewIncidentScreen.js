@@ -6,9 +6,11 @@ import {
     TextInput,
     TouchableOpacity,
     ScrollView,
+    Image,
+    Alert,
     Platform,
     ActivityIndicator,
-    Image,
+    Modal
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';

@@ -65,11 +65,11 @@ const ReportsScreen = ({ onNavPress }) => {
 
         const getBezierPath = (pts) => {
             if (pts.length < 2) return '';
-            let path = `M ${pts[0].x} ${pts[0].y}`;
+            let path = `M ${pts[0].x} ${pts[0].y} `;
             for (let i = 0; i < pts.length - 1; i++) {
                 const cp1x = pts[i].x + step / 2;
                 const cp2x = pts[i + 1].x - step / 2;
-                path += ` C ${cp1x} ${pts[i].y}, ${cp2x} ${pts[i + 1].y}, ${pts[i + 1].x} ${pts[i + 1].y}`;
+                path += ` C ${cp1x} ${pts[i].y}, ${cp2x} ${pts[i + 1].y}, ${pts[i + 1].x} ${pts[i + 1].y} `;
             }
             return path;
         };
@@ -237,7 +237,7 @@ const ReportsScreen = ({ onNavPress }) => {
                                     <Text style={styles.issueTypePercent}>{type.percentage}%</Text>
                                 </View>
                                 <View style={styles.progressBar}>
-                                    <View style={[styles.progressFill, { width: `${type.percentage}%`, backgroundColor: type.color }]} />
+                                    <View style={[styles.progressFill, { width: `${type.percentage}% `, backgroundColor: type.color }]} />
                                 </View>
                             </View>
                         </View>

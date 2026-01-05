@@ -5,10 +5,12 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
+    Image, // Added Image
     KeyboardAvoidingView,
     Platform,
     ActivityIndicator,
     ScrollView,
+    Alert, // Added Alert
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -165,13 +167,7 @@ const LoginScreen = ({ onSignUp, onLoginSuccess }) => {
                             </View>
                         </View>
 
-                        {/* Footer */}
-                        <View style={styles.footer}>
-                            <Text style={styles.footerText}>
-                                Don't have an account?{' '}
-                                <Text style={styles.signUpLink} onPress={onSignUp}>Sign Up</Text>
-                            </Text>
-                        </View>
+
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>

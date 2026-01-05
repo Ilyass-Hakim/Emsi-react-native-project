@@ -6,10 +6,10 @@ import {
     TextInput,
     TouchableOpacity,
     ScrollView,
-    SafeAreaView,
     FlatList,
     Platform
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
@@ -125,7 +125,12 @@ const CategoriesScreen = ({ onNavPress }) => {
                     <View style={styles.headerLeft}>
                         <MaterialIcons name="drag-indicator" size={20} color="#5a7a65" />
                         <View style={[styles.iconBox, { backgroundColor: item.color + '20' }]}>
-                            <MaterialIcons name={item.icon || 'category'} size={24} color={item.color || theme.colors.primary} />
+                            {/* Validate icon name */}
+                            <MaterialIcons
+                                name={(item.icon && item.icon !== 'health_and_safety') ? item.icon : 'security'}
+                                size={24}
+                                color={item.color || theme.colors.primary}
+                            />
                         </View>
                         <View>
                             <Text style={styles.categoryName}>{item.name}</Text>

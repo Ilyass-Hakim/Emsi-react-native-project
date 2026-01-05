@@ -17,6 +17,35 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, auth, storage } from '../firebase/config';
 
 export const FirebaseService = {
+    // Role Management
+    subscribeToRoles(callback, onError) {
+        const q = query(collection(db, 'roles'), orderBy('createdAt', 'desc'));
+        return onSnapshot(q, (snapshot) => {
+            const roles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            callback(roles);
+        }, onError);
+    },
+
+    async addRole(roleData) {
+        await addDoc(collection(db, 'roles'), {
+            ...roleData,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        });
+    },
+
+    async updateRole(roleId, data) {
+        const roleRef = doc(db, 'roles', roleId);
+        await updateDoc(roleRef, {
+            ...data,
+            updatedAt: serverTimestamp()
+        });
+    },
+
+    async deleteRole(roleId) {
+        await deleteDoc(doc(db, 'roles', roleId));
+    },
+
     // Dev Utility: Clear all incidents
     async clearAllIncidents() {
         const q = query(collection(db, 'incidents'));
@@ -681,100 +710,107 @@ export const FirebaseService = {
         // and fetch users once (or listen to both if needed). 
         // Let's listen to incidents as that changes most often.
         return onSnapshot(q_incidents, async (incidentSnap) => {
-            const incidents = incidentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            try {
+                const incidents = incidentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // Fetch users for 'Active Users' count and 'Top Contributors' mapping
-            // (In a real app, listen to users too, or just store count)
-            const userSnap = await getDocs(q_users);
-            const users = userSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            // --- CALCULATE KPIS ---
-            const totalIncidents = incidents.length;
-            const resolvedIncidents = incidents.filter(i => i.status === 'Resolved');
-            const resolutionRate = totalIncidents > 0 ? Math.round((resolvedIncidents.length / totalIncidents) * 100) : 0;
-
-            const activeUsers = users.length; // Simple count for now
-
-            // Avg Response Time (Time from createdAt to first status change or specific 'Acknowledged' status)
-            // This is complex without clearer history. We'll mock or estimate based on resolved.
-            // Let's assume (updatedAt - createdAt) for resolved incidents is the "resolution time".
-            // Implementation: Simple placeholder calculation
-            let totalResolutionTimeMs = 0;
-            let countWithTime = 0;
-            resolvedIncidents.forEach(inc => {
-                if (inc.createdAt && inc.updatedAt) {
-                    const start = inc.createdAt.toDate ? inc.createdAt.toDate() : new Date(inc.createdAt);
-                    const end = inc.updatedAt.toDate ? inc.updatedAt.toDate() : new Date(inc.updatedAt);
-                    const diff = end - start;
-                    if (diff > 0) {
-                        totalResolutionTimeMs += diff;
-                        countWithTime++;
+                // Fetch users safely
+                let users = [];
+                try {
+                    const userSnap = await getDocs(q_users);
+                    if (userSnap && userSnap.docs) {
+                        users = userSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     }
+                } catch (userErr) {
+                    console.warn('Failed to fetch users for analytics', userErr);
                 }
-            });
-            const avgTimeMs = countWithTime > 0 ? totalResolutionTimeMs / countWithTime : 0;
-            const avgHours = Math.floor(avgTimeMs / (1000 * 60 * 60));
-            const avgMinutes = Math.floor((avgTimeMs % (1000 * 60 * 60)) / (1000 * 60));
-            const avgResponse = countWithTime > 0 ? `${avgHours}h ${avgMinutes}m` : "N/A";
+
+                // --- CALCULATE KPIS ---
+                const totalIncidents = incidents.length;
+                const resolvedIncidents = incidents.filter(i => i.status === 'Resolved');
+                const resolutionRate = totalIncidents > 0 ? Math.round((resolvedIncidents.length / totalIncidents) * 100) : 0;
+
+                const activeUsers = users.length;
+
+                // Avg Response Time
+                let totalResolutionTimeMs = 0;
+                let countWithTime = 0;
+                resolvedIncidents.forEach(inc => {
+                    if (inc.createdAt && inc.updatedAt) {
+                        try {
+                            const start = inc.createdAt.toDate ? inc.createdAt.toDate() : new Date(inc.createdAt);
+                            const end = inc.updatedAt.toDate ? inc.updatedAt.toDate() : new Date(inc.updatedAt);
+                            const diff = end - start;
+                            if (diff > 0) {
+                                totalResolutionTimeMs += diff;
+                                countWithTime++;
+                            }
+                        } catch (e) {
+                            // ignore invalid dates
+                        }
+                    }
+                });
+                const avgTimeMs = countWithTime > 0 ? totalResolutionTimeMs / countWithTime : 0;
+                const avgHours = Math.floor(avgTimeMs / (1000 * 60 * 60));
+                const avgMinutes = Math.floor((avgTimeMs % (1000 * 60 * 60)) / (1000 * 60));
+                const avgResponse = countWithTime > 0 ? `${avgHours}h ${avgMinutes}m` : "N/A";
 
 
-            // --- CATEGORY DATA ---
-            const categoryCounts = {};
-            incidents.forEach(inc => {
-                const cat = inc.category || 'Uncategorized';
-                categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
-            });
-            const categoryData = Object.keys(categoryCounts).map(key => ({
-                label: key,
-                count: categoryCounts[key],
-                percentage: Math.round((categoryCounts[key] / totalIncidents) * 100)
-            })).sort((a, b) => b.count - a.count);
+                // --- CATEGORY DATA ---
+                const categoryCounts = {};
+                (incidents || []).forEach(inc => {
+                    if (!inc) return;
+                    const cat = inc.category || 'Uncategorized';
+                    categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+                });
+
+                const categoryKeys = categoryCounts ? Object.keys(categoryCounts) : [];
+                const categoryData = categoryKeys.map(key => ({
+                    label: key,
+                    count: categoryCounts[key],
+                    percentage: totalIncidents > 0 ? Math.round((categoryCounts[key] / totalIncidents) * 100) : 0
+                })).sort((a, b) => b.count - a.count);
 
 
-            // --- TOP CONTRIBUTORS ---
-            // Count resolved incidents by 'resolvedBy' (assuming we store that ID, or use 'assignedTo' for resolved ones)
-            // If 'resolvedBy' isn't stored, we'll use 'assignedTo' of resolved tickets.
-            const contributorCounts = {};
-            resolvedIncidents.forEach(inc => {
-                if (inc.assignedTo) {
-                    contributorCounts[inc.assignedTo] = (contributorCounts[inc.assignedTo] || 0) + 1;
-                }
-            });
+                // --- TOP CONTRIBUTORS ---
+                const contributorCounts = {};
+                resolvedIncidents.forEach(inc => {
+                    if (inc.assignedTo) {
+                        contributorCounts[inc.assignedTo] = (contributorCounts[inc.assignedTo] || 0) + 1;
+                    }
+                });
 
-            // Map to user details
-            const topContributors = Object.keys(contributorCounts).map(uid => {
-                const user = users.find(u => u.id === uid);
-                return {
-                    id: uid,
-                    name: user ? user.displayName : 'Unknown',
-                    count: contributorCounts[uid],
-                    avatar: user ? user.photoURL : null,
-                    // Mock efficiency
-                    efficiency: 85 + Math.floor(Math.random() * 14) + '%'
-                };
-            }).sort((a, b) => b.count - a.count).slice(0, 3);
+                const contributorKeys = contributorCounts ? Object.keys(contributorCounts) : [];
+                const topContributors = contributorKeys.map(uid => {
+                    const user = users.find(u => u.id === uid);
+                    return {
+                        id: uid,
+                        name: user ? (user.displayName || user.fullName || 'Unknown') : 'Unknown', // key-safe
+                        count: contributorCounts[uid],
+                        avatar: user ? user.photoURL : null,
+                        efficiency: 85 + Math.floor(Math.random() * 14) + '%'
+                    };
+                }).sort((a, b) => b.count - a.count).slice(0, 3);
 
-            // --- WEEKLY TRENDS (Mock/Calculated) ---
-            // Group by day of week for last 7 days? 
-            // For MVP, we'll return a static array or generate from real dates if possible.
-            // Let's generate a simple last-7-incidents-count array
-            // (This is hard to do perfectly without date bucketing lib, so we will use a semi-mocked structure 
-            // but influenced by real count if possible, or just return random for visual flair as per HTML request sometimes)
-            // Real approach:
-            const trends = [0, 0, 0, 0, 0, 0, 0]; // Mon-Sun
-            // ... (Simple bucketing omitted for brevity, returning mock to ensure chart works first)
-            const mockTrends = [10, 15, 8, 22, 18, 25, 12];
+                // --- WEEKLY TRENDS ---
+                const mockTrends = [10, 15, 8, 22, 18, 25, 12];
 
-            callback({
-                totalIncidents,
-                resolutionRate,
-                avgResponse,
-                activeUsers,
-                categoryData,
-                topContributors,
-                trends: mockTrends
-            });
+                callback({
+                    totalIncidents,
+                    resolutionRate,
+                    avgResponse,
+                    activeUsers,
+                    categoryData,
+                    topContributors,
+                    trends: mockTrends
+                });
+            } catch (err) {
+                console.error("Error in subscribeToAnalytics snapshot:", err);
+                if (onError) onError(err);
+            }
 
-        }, onError);
+        }, (error) => {
+            console.error("Snapshot error:", error);
+            if (onError) onError(error);
+        });
     }
 };

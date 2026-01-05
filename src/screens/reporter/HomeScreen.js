@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
-    StyleSheet,
-    View,
-    Text,
-    ScrollView,
+    TextInput,
     TouchableOpacity,
     Image,
+    ScrollView,
+    RefreshControl,
+    Platform,
+    Dimensions,
+    StyleSheet, // Keep StyleSheet, View, Text, ActivityIndicator if they are used and not replaced by other components
+    View,
+    Text,
     ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';

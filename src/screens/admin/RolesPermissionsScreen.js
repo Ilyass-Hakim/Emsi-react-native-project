@@ -6,15 +6,64 @@ import {
     TextInput,
     TouchableOpacity,
     ScrollView,
-    SafeAreaView,
     Platform
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
+import { FirebaseService } from '../../services/firebaseService';
+import RoleEditorModal from '../../components/RoleEditorModal';
 
 const RolesPermissionsScreen = ({ onNavPress }) => {
     const [searchQuery, setSearchQuery] = useState('');
+    const [roles, setRoles] = useState([]);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [editingRole, setEditingRole] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    React.useEffect(() => {
+        const unsubscribe = FirebaseService.subscribeToRoles(
+            (data) => {
+                setRoles(data);
+                setLoading(false);
+            },
+            (error) => console.error("Roles Error:", error)
+        );
+        return () => unsubscribe();
+    }, []);
+
+    const handleAddRole = () => {
+        setEditingRole(null);
+        setModalVisible(true);
+    };
+
+    const handleEditRole = (role) => {
+        setEditingRole(role);
+        setModalVisible(true);
+    };
+
+    const handleSaveRole = async (roleData) => {
+        try {
+            if (editingRole) {
+                await FirebaseService.updateRole(editingRole.id, roleData);
+            } else {
+                await FirebaseService.addRole(roleData);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Failed to save role');
+        }
+    };
+
+    const handleDeleteRole = async (roleId) => {
+        try {
+            await FirebaseService.deleteRole(roleId);
+        } catch (error) {
+            console.error(error);
+            alert('Failed to delete role');
+        }
+    };
 
     const ActiveRoleItem = ({ icon, color, label, meta, count, isSystem }) => (
         <TouchableOpacity style={styles.roleItem}>
@@ -36,24 +85,35 @@ const RolesPermissionsScreen = ({ onNavPress }) => {
                             </View>
                         )}
                     </View>
-                    <Text style={styles.roleMeta} numberOfLines={1}>{meta} • {count} Users</Text>
+                    <Text style={styles.roleMeta} numberOfLines={1}>{meta} • {count}</Text>
                 </View>
                 <MaterialIcons name="chevron-right" size={24} color="#6b7280" style={styles.chevron} />
             </View>
         </TouchableOpacity>
     );
 
-    const CustomRoleItem = ({ icon, label, meta, count }) => (
-        <TouchableOpacity style={styles.roleItem}>
+    const CustomRoleItem = ({ item }) => (
+        <TouchableOpacity style={styles.roleItem} onPress={() => handleEditRole(item)}>
             <View style={styles.roleItemContent}>
-                <View style={styles.customIconContainer}>
-                    <MaterialIcons name={icon} size={24} color="#9ca3af" />
+                <View style={[styles.customIconContainer, { backgroundColor: (item.color || '#9ca3af') + '10' }]}>
+                    <MaterialIcons name={item.icon || 'admin-panel-settings'} size={24} color={item.color || '#9ca3af'} />
                 </View>
                 <View style={styles.roleInfo}>
-                    <Text style={styles.roleName} numberOfLines={1}>{label}</Text>
-                    <Text style={styles.roleMeta} numberOfLines={1}>{meta} • {count} Users</Text>
+                    <View style={styles.roleHeader}>
+                        <Text style={styles.roleName} numberOfLines={1}>{item.label}</Text>
+                        {item.baseRole && (
+                            <View style={[styles.typeBadge, { backgroundColor: (item.color || '#9ca3af') + '10', borderColor: (item.color || '#9ca3af') + '30' }]}>
+                                <Text style={[styles.typeBadgeText, { color: item.color || '#9ca3af' }]}>{item.baseRole}</Text>
+                            </View>
+                        )}
+                    </View>
+                    <Text style={styles.roleMeta} numberOfLines={1}>
+                        {item.description || 'No description'}
+                    </Text>
                 </View>
-                <MaterialIcons name="chevron-right" size={24} color="#6b7280" style={styles.chevron} />
+                <TouchableOpacity onPress={() => handleDeleteRole(item.id)} style={{ padding: 8 }}>
+                    <MaterialIcons name="delete-outline" size={20} color="#ef4444" />
+                </TouchableOpacity>
             </View>
         </TouchableOpacity>
     );
@@ -70,7 +130,7 @@ const RolesPermissionsScreen = ({ onNavPress }) => {
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Roles & Permissions</Text>
                 </View>
-                <TouchableOpacity style={styles.addBtn}>
+                <TouchableOpacity style={styles.addBtn} onPress={handleAddRole}>
                     <MaterialIcons name="add" size={24} color={theme.colors.primary} />
                 </TouchableOpacity>
             </View>
@@ -93,14 +153,14 @@ const RolesPermissionsScreen = ({ onNavPress }) => {
 
                 {/* Active Roles */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Active Roles</Text>
+                    <Text style={styles.sectionTitle}>System Roles</Text>
                     <View style={styles.list}>
                         <ActiveRoleItem
                             icon="security"
                             color="#13ec5b"
                             label="Administrator"
                             meta="Full Access"
-                            count="3"
+                            count="3 Users"
                             isSystem
                         />
                         <ActiveRoleItem
@@ -108,21 +168,24 @@ const RolesPermissionsScreen = ({ onNavPress }) => {
                             color="#3b82f6"
                             label="Responder"
                             meta="Edit Status, Comment"
-                            count="12"
+                            count="12 Users"
+                            isSystem
                         />
                         <ActiveRoleItem
                             icon="rate-review"
                             color="#f97316"
                             label="Reviewer"
                             meta="Approve, Reject"
-                            count="5"
+                            count="5 Users"
+                            isSystem
                         />
                         <ActiveRoleItem
                             icon="report"
                             color="#a855f7"
                             label="Reporter"
                             meta="Submit Only"
-                            count="84"
+                            count="84 Users"
+                            isSystem
                         />
                     </View>
                 </View>
@@ -132,24 +195,31 @@ const RolesPermissionsScreen = ({ onNavPress }) => {
                 {/* Custom Roles */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Custom Roles</Text>
-                    <View style={styles.list}>
-                        <CustomRoleItem
-                            icon="analytics"
-                            label="Analytics Viewer"
-                            meta="View Reports, Export"
-                            count="2"
-                        />
-                        <CustomRoleItem
-                            icon="explore"
-                            label="Field Agent"
-                            meta="Submit, Geo-tagging"
-                            count="24"
-                        />
-                    </View>
+                    {roles.length === 0 ? (
+                        <View style={styles.emptyState}>
+                            <Text style={styles.emptyText}>No custom roles yet. Tap + to create one.</Text>
+                        </View>
+                    ) : (
+                        <View style={styles.list}>
+                            {roles
+                                .filter(r => r.label.toLowerCase().includes(searchQuery.toLowerCase()))
+                                .map(role => (
+                                    <CustomRoleItem key={role.id} item={role} />
+                                ))
+                            }
+                        </View>
+                    )}
                 </View>
 
                 <View style={{ height: 100 }} />
             </ScrollView>
+
+            <RoleEditorModal
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+                onSave={handleSaveRole}
+                initialRole={editingRole}
+            />
 
             {/* Bottom Nav */}
             <View style={styles.bottomNav}>
@@ -333,6 +403,14 @@ const styles = StyleSheet.create({
     chevron: {
         opacity: 0.5,
     },
+    emptyState: {
+        padding: 24,
+        alignItems: 'center',
+    },
+    emptyText: {
+        color: '#6b7280',
+        fontStyle: 'italic',
+    },
     bottomNav: {
         position: 'absolute',
         bottom: 0,
@@ -369,6 +447,17 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '500',
         color: '#6b7280',
+    },
+    typeBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 10,
+        borderWidth: 1,
+    },
+    typeBadgeText: {
+        fontSize: 10,
+        fontWeight: '600',
+        textTransform: 'uppercase',
     },
 });
 

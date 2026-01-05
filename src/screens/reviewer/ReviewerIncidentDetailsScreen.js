@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         height: '50%',
-        background: 'linear-gradient(to top, rgba(16, 34, 22, 0.8), transparent)',
+        backgroundColor: 'rgba(16, 34, 22, 0.4)',
     },
     description: {
         fontSize: 15,

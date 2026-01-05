@@ -1,22 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     StyleSheet,
     View,
     Text,
     TextInput,
     TouchableOpacity,
+    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
     ActivityIndicator,
+    Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme/theme';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { FirebaseService } from '../services/firebaseService';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+
+// We need the config to create a secondary app
+const firebaseConfig = {
+    apiKey: "AIzaSyB0rw_vlwzPDs9Td28_xaGp4xdOg1Amw8k",
+    authDomain: "internal-issue-reporting-ead17.firebaseapp.com",
+    projectId: "internal-issue-reporting-ead17",
+    storageBucket: "internal-issue-reporting-ead17.firebasestorage.app",
+    messagingSenderId: "495021351206",
+    appId: "1:495021351206:web:ffad200afb3651ab9b61e7",
+    measurementId: "G-NX5530VB9G"
+};
 
 const RegisterScreen = ({ onLogin, onBack }) => {
     const [fullName, setFullName] = useState('');
@@ -25,10 +40,22 @@ const RegisterScreen = ({ onLogin, onBack }) => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [agreeTerms, setAgreeTerms] = useState(false);
+
     const [role, setRole] = useState('Reporter');
+    const [customRoles, setCustomRoles] = useState([]);
+    const [selectedSubRole, setSelectedSubRole] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    useEffect(() => {
+        const unsubscribe = FirebaseService.subscribeToRoles(
+            (data) => setCustomRoles(data),
+            (err) => console.error("Error fetching roles:", err)
+        );
+        return () => unsubscribe();
+    }, []);
+
+    const responderTypes = customRoles.filter(r => r.baseRole === 'Responder');
 
     const handleRegister = async () => {
         if (!fullName || !email || !password || !confirmPassword) {
@@ -39,35 +66,71 @@ const RegisterScreen = ({ onLogin, onBack }) => {
             setError('Passwords do not match');
             return;
         }
-        if (!agreeTerms) {
-            setError('Please agree to the Terms of Service');
-            return;
-        }
 
         setLoading(true);
         setError('');
 
+        let secondaryApp = null;
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            // 1. Create a secondary app instance to avoid signing out the current user (Admin)
+            const appName = 'secondaryApp-' + new Date().getTime();
+            secondaryApp = initializeApp(firebaseConfig, appName);
+            const secondaryAuth = getAuth(secondaryApp);
+
+            // 2. Create user on the secondary app
+            const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
             const user = userCredential.user;
 
-            // Save additional user info to Firestore
+            // 3. Save additional user info to Firestore (using MAIN DB is fine)
             await setDoc(doc(db, 'users', user.uid), {
                 fullName,
                 email,
                 role,
+                responderType: role === 'Responder' ? (selectedSubRole?.label || 'General') : null,
                 department: 'Not assigned',
                 createdAt: new Date().toISOString(),
             });
 
-            // Note: In App.js we will handle the auth state change to navigate
-            // but for now we can just suggest logging in or automated transition
-            alert('Account created successfully!');
-            onLogin();
+            // 4. Sign out the *secondary* user immediately
+            await signOut(secondaryAuth);
+
+            Alert.alert(
+                'Success',
+                'User account created successfully!',
+                [
+                    {
+                        text: 'Add Another',
+                        onPress: () => {
+                            setFullName('');
+                            setEmail('');
+                            setPassword('');
+                            setConfirmPassword('');
+                            setRole('Reporter');
+                            setSelectedSubRole(null);
+                        }
+                    },
+                    {
+                        text: 'Done',
+                        onPress: () => {
+                            if (onBack) onBack();
+                            else onLogin();
+                        }
+                    }
+                ]
+            );
+
         } catch (err) {
             console.error(err);
             setError(err.message);
         } finally {
+            // 5. Cleanup the secondary app
+            if (secondaryApp) {
+                try {
+                    await deleteApp(secondaryApp);
+                } catch (e) {
+                    console.warn("Error deleting secondary app:", e);
+                }
+            }
             setLoading(false);
         }
     };
@@ -89,7 +152,6 @@ const RegisterScreen = ({ onLogin, onBack }) => {
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* Headline */}
                     <View style={styles.headline}>
                         <Text style={styles.title}>Create Account</Text>
                         <Text style={styles.subtitle}>
@@ -97,15 +159,13 @@ const RegisterScreen = ({ onLogin, onBack }) => {
                         </Text>
                     </View>
 
-                    {/* Form */}
                     <View style={styles.form}>
-                        {/* Full Name */}
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Full Name</Text>
                             <View style={styles.inputWrapper}>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Enter your full name"
+                                    placeholder="Enter full name"
                                     placeholderTextColor={theme.colors.textSecondary}
                                     value={fullName}
                                     onChangeText={setFullName}
@@ -116,13 +176,12 @@ const RegisterScreen = ({ onLogin, onBack }) => {
                             </View>
                         </View>
 
-                        {/* Email Address */}
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Email Address</Text>
                             <View style={styles.inputWrapper}>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Enter your email"
+                                    placeholder="Enter email"
                                     placeholderTextColor={theme.colors.textSecondary}
                                     value={email}
                                     onChangeText={setEmail}
@@ -135,7 +194,6 @@ const RegisterScreen = ({ onLogin, onBack }) => {
                             </View>
                         </View>
 
-                        {/* Password */}
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Password</Text>
                             <View style={styles.inputWrapper}>
@@ -146,7 +204,6 @@ const RegisterScreen = ({ onLogin, onBack }) => {
                                     value={password}
                                     onChangeText={setPassword}
                                     secureTextEntry={!showPassword}
-                                    textAlign="left"
                                 />
                                 <TouchableOpacity
                                     style={[styles.inputIconWrapper, styles.rightIconBorder]}
@@ -161,7 +218,6 @@ const RegisterScreen = ({ onLogin, onBack }) => {
                             </View>
                         </View>
 
-                        {/* Confirm Password */}
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Confirm Password</Text>
                             <View style={styles.inputWrapper}>
@@ -172,7 +228,6 @@ const RegisterScreen = ({ onLogin, onBack }) => {
                                     value={confirmPassword}
                                     onChangeText={setConfirmPassword}
                                     secureTextEntry={!showConfirmPassword}
-                                    textAlign="left"
                                 />
                                 <TouchableOpacity
                                     style={[styles.inputIconWrapper, styles.rightIconBorder]}
@@ -187,105 +242,83 @@ const RegisterScreen = ({ onLogin, onBack }) => {
                             </View>
                         </View>
 
-                        {/* Role Selection */}
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Register as</Text>
                             <View style={styles.roleSelectionRow}>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.roleChip,
-                                        role === 'Reporter' && styles.roleChipActive
-                                    ]}
-                                    onPress={() => setRole('Reporter')}
-                                >
-                                    <MaterialIcons
-                                        name="person"
-                                        size={18}
-                                        color={role === 'Reporter' ? theme.colors.background : theme.colors.textSecondary}
-                                    />
-                                    <Text style={[
-                                        styles.roleChipText,
-                                        role === 'Reporter' && styles.roleChipTextActive
-                                    ]}>Reporter</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={[
-                                        styles.roleChip,
-                                        role === 'Reviewer' && styles.roleChipActive
-                                    ]}
-                                    onPress={() => setRole('Reviewer')}
-                                >
-                                    <MaterialIcons
-                                        name="verified-user"
-                                        size={18}
-                                        color={role === 'Reviewer' ? theme.colors.background : theme.colors.textSecondary}
-                                    />
-                                    <Text style={[
-                                        styles.roleChipText,
-                                        role === 'Reviewer' && styles.roleChipTextActive
-                                    ]}>Reviewer</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={[
-                                        styles.roleChip,
-                                        role === 'Responder' && styles.roleChipActive
-                                    ]}
-                                    onPress={() => setRole('Responder')}
-                                >
-                                    <MaterialIcons
-                                        name="medical-services"
-                                        size={18}
-                                        color={role === 'Responder' ? theme.colors.background : theme.colors.textSecondary}
-                                    />
-                                    <Text style={[
-                                        styles.roleChipText,
-                                        role === 'Responder' && styles.roleChipTextActive
-                                    ]}>Responder</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={[
-                                        styles.roleChip,
-                                        role === 'Admin' && styles.roleChipActive
-                                    ]}
-                                    onPress={() => setRole('Admin')}
-                                >
-                                    <MaterialIcons
-                                        name="admin-panel-settings"
-                                        size={18}
-                                        color={role === 'Admin' ? theme.colors.background : theme.colors.textSecondary}
-                                    />
-                                    <Text style={[
-                                        styles.roleChipText,
-                                        role === 'Admin' && styles.roleChipTextActive
-                                    ]}>Admin</Text>
-                                </TouchableOpacity>
+                                {['Reporter', 'Reviewer', 'Responder', 'Admin'].map(r => (
+                                    <TouchableOpacity
+                                        key={r}
+                                        style={[
+                                            styles.roleChip,
+                                            role === r && styles.roleChipActive
+                                        ]}
+                                        onPress={() => setRole(r)}
+                                    >
+                                        <MaterialIcons
+                                            name={r === 'Reporter' ? 'person' : r === 'Reviewer' ? 'verified-user' : r === 'Responder' ? 'medical-services' : 'admin-panel-settings'}
+                                            size={18}
+                                            color={role === r ? theme.colors.background : theme.colors.textSecondary}
+                                        />
+                                        <Text style={[
+                                            styles.roleChipText,
+                                            role === r && styles.roleChipTextActive
+                                        ]}>{r}</Text>
+                                    </TouchableOpacity>
+                                ))}
                             </View>
 
+                            {/* Specialized Responder Dropdown - Always show if role is Responder */}
+                            {role === 'Responder' && (
+                                <View style={styles.subRoleSection}>
+                                    <View style={styles.subRoleHeader}>
+                                        <Text style={styles.subLabel}>Specialization Type</Text>
+                                        {responderTypes.length === 0 && (
+                                            <Text style={styles.noSubRolesText}>(No custom types found)</Text>
+                                        )}
+                                    </View>
+                                    <View style={styles.subRoleGrid}>
+                                        {responderTypes.map(r => (
+                                            <TouchableOpacity
+                                                key={r.id}
+                                                style={[
+                                                    styles.subRoleChip,
+                                                    selectedSubRole?.id === r.id && styles.subRoleChipActive
+                                                ]}
+                                                onPress={() => setSelectedSubRole(r)}
+                                            >
+                                                <MaterialIcons
+                                                    name={r.icon || 'build'}
+                                                    size={16}
+                                                    color={selectedSubRole?.id === r.id ? theme.colors.background : r.color || theme.colors.primary}
+                                                />
+                                                <Text style={[
+                                                    styles.subRoleText,
+                                                    selectedSubRole?.id === r.id && styles.subRoleTextActive
+                                                ]}>{r.label}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.subRoleChip,
+                                                !selectedSubRole && styles.subRoleChipActive
+                                            ]}
+                                            onPress={() => setSelectedSubRole(null)}
+                                        >
+                                            <MaterialIcons
+                                                name="medical-services"
+                                                size={16}
+                                                color={!selectedSubRole ? theme.colors.background : theme.colors.textSecondary}
+                                            />
+                                            <Text style={[
+                                                styles.subRoleText,
+                                                !selectedSubRole && styles.subRoleTextActive
+                                            ]}>General</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            )}
                         </View>
 
-                        {/* Terms Checkbox */}
-                        <TouchableOpacity
-                            style={styles.termsRow}
-                            onPress={() => setAgreeTerms(!agreeTerms)}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[
-                                styles.checkbox,
-                                agreeTerms && styles.checkboxChecked
-                            ]}>
-                                {agreeTerms && (
-                                    <MaterialIcons name="check" size={16} color={theme.colors.background} />
-                                )}
-                            </View>
-                            <Text style={styles.termsText}>
-                                I agree to the <Text style={styles.link}>Terms of Service</Text> and <Text style={styles.link}>Privacy Policy</Text>.
-                            </Text>
-                        </TouchableOpacity>
-
-                        {/* Error Message */}
                         {error ? (
                             <View style={styles.errorWrapper}>
                                 <MaterialIcons name="error" size={16} color="#ef4444" />
@@ -293,7 +326,6 @@ const RegisterScreen = ({ onLogin, onBack }) => {
                             </View>
                         ) : null}
 
-                        {/* Register Button */}
                         <TouchableOpacity
                             style={[styles.registerButton, loading && { opacity: 0.7 }]}
                             onPress={handleRegister}
@@ -305,33 +337,6 @@ const RegisterScreen = ({ onLogin, onBack }) => {
                                 <Text style={styles.registerButtonText}>Register</Text>
                             )}
                         </TouchableOpacity>
-
-                        {/* Divider */}
-                        <View style={styles.dividerWrapper}>
-                            <View style={styles.divider} />
-                            <Text style={styles.dividerText}>Or register with</Text>
-                            <View style={styles.divider} />
-                        </View>
-
-                        {/* Social Buttons */}
-                        <View style={styles.socialRow}>
-                            <TouchableOpacity style={styles.socialButton}>
-                                <Ionicons name="logo-google" size={20} color={theme.colors.text} />
-                                <Text style={styles.socialButtonText}>Google</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.socialButton}>
-                                <Ionicons name="logo-apple" size={20} color={theme.colors.text} />
-                                <Text style={styles.socialButtonText}>Apple</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        {/* Login Link */}
-                        <View style={styles.footer}>
-                            <Text style={styles.footerText}>
-                                Already have an account?{' '}
-                                <Text style={styles.loginLink} onPress={onLogin}>Log In</Text>
-                            </Text>
-                        </View>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -409,7 +414,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         paddingHorizontal: theme.spacing.md,
         height: '100%',
-        textAlign: 'left',
     },
     inputIconWrapper: {
         paddingHorizontal: theme.spacing.md,
@@ -422,35 +426,6 @@ const styles = StyleSheet.create({
         borderLeftWidth: 1,
         borderLeftColor: theme.colors.border,
     },
-    termsRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        marginVertical: theme.spacing.md,
-        gap: 12,
-    },
-    checkbox: {
-        width: 20,
-        height: 20,
-        borderRadius: 4,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 2,
-    },
-    checkboxChecked: {
-        backgroundColor: theme.colors.primary,
-        borderColor: theme.colors.primary,
-    },
-    termsText: {
-        flex: 1,
-        color: theme.colors.textSecondary,
-        fontSize: 14,
-        lineHeight: 20,
-    },
-    link: {
-        color: theme.colors.primary,
-    },
     registerButton: {
         backgroundColor: theme.colors.primary,
         height: 56,
@@ -458,10 +433,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginTop: theme.spacing.md,
-        shadowColor: theme.colors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
         elevation: 5,
     },
     registerButtonText: {
@@ -483,57 +454,6 @@ const styles = StyleSheet.create({
         color: '#ef4444',
         fontSize: 14,
         fontWeight: '500',
-    },
-    dividerWrapper: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginVertical: theme.spacing.xl,
-    },
-    divider: {
-        flex: 1,
-        height: 1,
-        backgroundColor: theme.colors.border,
-    },
-    dividerText: {
-        color: theme.colors.textMuted,
-        fontSize: 12,
-        fontWeight: '600',
-        marginHorizontal: theme.spacing.md,
-        textTransform: 'none',
-    },
-    socialRow: {
-        flexDirection: 'row',
-        gap: 16,
-        marginBottom: theme.spacing.xl,
-    },
-    socialButton: {
-        flex: 1,
-        flexDirection: 'row',
-        height: 48,
-        borderRadius: theme.roundness.lg,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 8,
-    },
-    socialButtonText: {
-        color: theme.colors.text,
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    footer: {
-        alignItems: 'center',
-        marginBottom: theme.spacing.lg,
-    },
-    footerText: {
-        color: theme.colors.textSecondary,
-        fontSize: 16,
-    },
-    loginLink: {
-        color: theme.colors.primary,
-        fontWeight: 'bold',
     },
     roleSelectionRow: {
         flexDirection: 'row',
@@ -566,7 +486,60 @@ const styles = StyleSheet.create({
         color: theme.colors.background,
         fontWeight: 'bold',
     },
+    subRoleSection: {
+        marginTop: 16,
+        padding: 12,
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    subRoleHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 10,
+    },
+    subLabel: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#9ca3af',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    noSubRolesText: {
+        fontSize: 10,
+        color: '#64748b',
+        fontStyle: 'italic',
+    },
+    subRoleGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    subRoleChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        backgroundColor: theme.colors.surface,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+        gap: 6,
+    },
+    subRoleChipActive: {
+        backgroundColor: theme.colors.primary,
+        borderColor: theme.colors.primary,
+    },
+    subRoleText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: theme.colors.textSecondary,
+    },
+    subRoleTextActive: {
+        color: theme.colors.background,
+    },
 });
 
 export default RegisterScreen;
-

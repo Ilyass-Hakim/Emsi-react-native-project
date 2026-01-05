@@ -3,12 +3,12 @@ import {
     StyleSheet,
     View,
     Text,
-    ScrollView,
-    TouchableOpacity,
     TextInput,
-    Image,
+    TouchableOpacity,
+    ScrollView,
+    FlatList,
     Platform,
-    ActivityIndicator,
+    ActivityIndicator
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -38,7 +38,7 @@ const IncomingIncidentsScreen = ({ onNavPress, onIncidentPress }) => {
             const mappedIncidents = incidentsData.map(data => ({
                 ...data,
                 timeAgo: getTimeAgo(data.createdAt),
-                displayId: `#INC-${data.createdAt?.seconds || '0000'}-${data.id.substring(0, 3).toUpperCase()}`,
+                displayId: `#INC - ${data.createdAt?.seconds || '0000'} -${data.id.substring(0, 3).toUpperCase()} `,
                 priorityColor: getPriorityColor(data.priority),
                 priorityIcon: getPriorityIcon(data.priority),
                 categoryIcon: getCategoryIcon(data.category),

@@ -3,12 +3,13 @@ import {
     StyleSheet,
     View,
     Text,
-    ScrollView,
+    TextInput,
     TouchableOpacity,
+    ScrollView,
     Platform,
-    ActivityIndicator,
     Image,
-    Alert,
+    ActivityIndicator,
+    Alert
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -224,14 +225,6 @@ const IncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
                                             <Text style={styles.responderRole}>{incident.assignedToRole || 'Technician'}</Text>
                                         </View>
                                     </View>
-                                    <View style={styles.responderActions}>
-                                        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary + '20' }]}>
-                                            <MaterialIcons name="call" size={20} color={theme.colors.primary} />
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={styles.actionBtn}>
-                                            <MaterialIcons name="chat" size={20} color={theme.colors.textSecondary} />
-                                        </TouchableOpacity>
-                                    </View>
                                 </View>
                             ) : (
                                 <View style={styles.noResponderContainer}>
@@ -312,14 +305,15 @@ const IncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
             </ScrollView>
 
             {/* Floating Action Button */}
-            {incident && (
-                <TouchableOpacity style={styles.fab} onPress={handleAddUpdate}>
-                    <MaterialIcons name="edit-note" size={24} color={theme.colors.background} />
-                    <Text style={styles.fabText}>Add Update</Text>
-                </TouchableOpacity>
-            )}
+            {
+                incident && (
+                    <TouchableOpacity style={styles.fab} onPress={handleAddUpdate}>
+                        <MaterialIcons name="edit-note" size={24} color={theme.colors.background} />
+                        <Text style={styles.fabText}>Add Update</Text>
+                    </TouchableOpacity>
+                )
+            }
 
-            {/* Bottom Nav */}
             <View style={styles.bottomNav}>
                 <NavButton icon="home" label="Home" onPress={() => onNavPress('home')} />
                 <NavButton icon="assignment-late" label="My Incidents" active onPress={() => onNavPress('my-incidents')} />

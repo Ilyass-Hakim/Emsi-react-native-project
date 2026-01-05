@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
+    TextInput,
+    TouchableOpacity,
+    FlatList,
+    Platform,
+    ActivityIndicator,
+    Image,
     StyleSheet,
     View,
     Text,
     ScrollView,
-    TouchableOpacity,
-    ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';

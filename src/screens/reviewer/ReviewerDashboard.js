@@ -3,14 +3,17 @@ import {
     StyleSheet,
     View,
     Text,
-    ScrollView,
+    TextInput,
     TouchableOpacity,
+    ScrollView,
+    FlatList,
+    Platform,
     Image,
-    ActivityIndicator,
-    Dimensions,
+    RefreshControl,
+    Dimensions
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
@@ -19,6 +22,45 @@ import useStore from '../../store/useStore';
 import { FirebaseService } from '../../services/firebaseService';
 
 const { width } = Dimensions.get('window');
+
+const StatCard = ({ title, value, icon, color, highlight }) => (
+    <View style={[styles.statCard, highlight ? { backgroundColor: theme.colors.primary } : { backgroundColor: '#283039' }]}>
+        <View style={styles.statTop}>
+            <View style={[styles.statIconWrapper, highlight ? { backgroundColor: 'rgba(255,255,255,0.2)' } : { backgroundColor: '#3d4652' }]}>
+                <MaterialIcons name={icon} size={20} color={highlight ? "#fff" : "#9dabb9"} />
+            </View>
+            <Text style={[styles.statLabel, highlight ? { color: 'rgba(255,255,255,0.9)' } : { color: '#9dabb9' }]}>{title}</Text>
+        </View>
+        <Text style={[styles.statValue, highlight ? { color: '#fff' } : { color: '#fff' }]}>{value}</Text>
+        {highlight && <View style={styles.cardGlow} />}
+    </View>
+);
+
+const ChartRow = ({ label, percent, color }) => (
+    <View style={styles.chartRow}>
+        <Text style={[styles.chartLabel, { color }]}>{label}</Text>
+        <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${percent}%`, backgroundColor: color }]} />
+            </View>
+            <Text style={styles.progressText}>{percent}%</Text>
+        </View>
+    </View>
+);
+
+const NavButton = ({ icon, label, active, onPress }) => (
+    <TouchableOpacity style={styles.navBtn} onPress={onPress}>
+        <MaterialIcons
+            name={icon}
+            size={24}
+            color={active ? theme.colors.primary : '#9dabb9'}
+            style={active && styles.activeIcon}
+        />
+        <Text style={[styles.navLabel, { color: active ? theme.colors.primary : '#9dabb9', fontWeight: active ? 'bold' : '500' }]}>
+            {label}
+        </Text>
+    </TouchableOpacity>
+);
 
 const ReviewerDashboard = ({ onNavPress, onIncidentPress }) => {
     const { profile } = useStore();
@@ -234,45 +276,6 @@ const ReviewerDashboard = ({ onNavPress, onIncidentPress }) => {
         </SafeAreaView>
     );
 };
-
-const StatCard = ({ title, value, icon, color, highlight }) => (
-    <View style={[styles.statCard, highlight ? { backgroundColor: theme.colors.primary } : { backgroundColor: '#283039' }]}>
-        <View style={styles.statTop}>
-            <View style={[styles.statIconWrapper, highlight ? { backgroundColor: 'rgba(255,255,255,0.2)' } : { backgroundColor: '#3d4652' }]}>
-                <MaterialIcons name={icon} size={20} color={highlight ? "#fff" : "#9dabb9"} />
-            </View>
-            <Text style={[styles.statLabel, highlight ? { color: 'rgba(255,255,255,0.9)' } : { color: '#9dabb9' }]}>{title}</Text>
-        </View>
-        <Text style={[styles.statValue, highlight ? { color: '#fff' } : { color: '#fff' }]}>{value}</Text>
-        {highlight && <View style={styles.cardGlow} />}
-    </View>
-);
-
-const ChartRow = ({ label, percent, color }) => (
-    <View style={styles.chartRow}>
-        <Text style={[styles.chartLabel, { color }]}>{label}</Text>
-        <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${percent}%`, backgroundColor: color }]} />
-            </View>
-            <Text style={styles.progressText}>{percent}%</Text>
-        </View>
-    </View>
-);
-
-const NavButton = ({ icon, label, active, onPress }) => (
-    <TouchableOpacity style={styles.navBtn} onPress={onPress}>
-        <MaterialIcons
-            name={icon}
-            size={24}
-            color={active ? theme.colors.primary : '#9dabb9'}
-            style={active && styles.activeIcon}
-        />
-        <Text style={[styles.navLabel, { color: active ? theme.colors.primary : '#9dabb9', fontWeight: active ? 'bold' : '500' }]}>
-            {label}
-        </Text>
-    </TouchableOpacity>
-);
 
 const styles = StyleSheet.create({
     container: {
@@ -560,4 +563,3 @@ const styles = StyleSheet.create({
 });
 
 export default ReviewerDashboard;
-

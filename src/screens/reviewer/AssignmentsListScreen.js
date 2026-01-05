@@ -4,8 +4,11 @@ import {
     View,
     Text,
     ScrollView,
+    TextInput,
     TouchableOpacity,
-    ActivityIndicator,
+    FlatList,
+    Platform,
+    ActivityIndicator
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';

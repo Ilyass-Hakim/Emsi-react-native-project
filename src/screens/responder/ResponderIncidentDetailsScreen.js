@@ -3,12 +3,12 @@ import {
     StyleSheet,
     View,
     Text,
-    ScrollView,
+    TextInput,
     TouchableOpacity,
+    ScrollView,
+    Platform,
     Image,
-    ActivityIndicator,
-    Alert,
-    Platform
+    ActivityIndicator
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';

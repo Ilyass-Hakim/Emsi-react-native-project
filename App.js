@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, ActivityIndicator, Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { theme } from './src/theme/theme';
+import useStore from './src/store/useStore';
+
+// We will uncomment these one by one to find the crash
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/reporter/HomeScreen';
@@ -26,9 +29,11 @@ import RolesPermissionsScreen from './src/screens/admin/RolesPermissionsScreen';
 import CategoriesScreen from './src/screens/admin/CategoriesScreen';
 import AnalyticsDashboardScreen from './src/screens/admin/AnalyticsDashboardScreen';
 
-
-
-import useStore from './src/store/useStore';
+const ScreenPlaceholder = ({ name }) => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#102216' }}>
+    <Text style={{ color: '#fff', fontSize: 18 }}>Screen: {name}</Text>
+  </View>
+);
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('login');
@@ -42,36 +47,15 @@ export default function App() {
   useEffect(() => {
     if (!loading && user) {
       if (profile) {
-        // Normal flow with profile
-        const isEntryScreen = currentScreen === 'login' || currentScreen === 'register';
-
+        const isEntryScreen = currentScreen === 'login' || (currentScreen === 'register' && profile.role !== 'Admin');
         if (isEntryScreen) {
-          if (profile.role === 'Reviewer') {
-            setCurrentScreen('reviewer-dashboard');
-          } else if (profile.role === 'Responder') {
-            setCurrentScreen('responder-dashboard');
-          } else if (profile.role === 'Admin') {
-            setCurrentScreen('admin-user-management');
-          } else {
-            setCurrentScreen('home');
-          }
-        } else if (profile.role === 'Reviewer' && currentScreen === 'home') {
-          setCurrentScreen('reviewer-dashboard');
-        } else if (profile.role === 'Responder' && (currentScreen === 'home' || currentScreen === 'reviewer-dashboard')) {
-          setCurrentScreen('responder-dashboard');
-        } else if (profile.role === 'Admin' && currentScreen !== 'admin-user-management' && currentScreen !== 'admin-roles-permissions' && currentScreen !== 'admin-categories' && currentScreen !== 'admin-analytics' && currentScreen !== 'profile' && currentScreen !== 'register') {
-          setCurrentScreen('admin-user-management');
-        } else if (profile.role !== 'Reviewer' && profile.role !== 'Responder' && profile.role !== 'Admin' && (currentScreen === 'reviewer-dashboard' || currentScreen === 'responder-dashboard' || currentScreen === 'admin-user-management')) {
-          setCurrentScreen('home');
-
+          if (profile.role === 'Reviewer') setCurrentScreen('reviewer-dashboard');
+          else if (profile.role === 'Responder') setCurrentScreen('responder-dashboard');
+          else if (profile.role === 'Admin') setCurrentScreen('admin-user-management');
+          else setCurrentScreen('home');
         }
-      } else {
-        // Authenticated but no profile (e.g., deleted document or incomplete registration)
-        // We can redirect to profile or allow home but with limited features
-        // BUT don't redirect if we're on register (admin adding users)
-        if (currentScreen === 'login') {
-          setCurrentScreen('profile'); // Send them to profile to fix it if possible
-        }
+      } else if (currentScreen === 'login') {
+        setCurrentScreen('profile');
       }
     } else if (!loading && !user) {
       if (currentScreen !== 'login' && currentScreen !== 'register') {
@@ -99,6 +83,26 @@ export default function App() {
               } else {
                 setCurrentScreen('login');
               }
+            }}
+          />
+        );
+      case 'reviewer-dashboard':
+        return (
+          <ReviewerDashboard
+            onNavPress={(screen) => setCurrentScreen(screen)}
+            onIncidentPress={(id) => {
+              setSelectedIncidentId(id);
+              setCurrentScreen('incident-details');
+            }}
+          />
+        );
+      case 'responder-dashboard':
+        return (
+          <ResponderDashboard
+            onNavPress={(screen) => setCurrentScreen(screen)}
+            onIncidentPress={(id) => {
+              setSelectedIncidentId(id);
+              setCurrentScreen('incident-details');
             }}
           />
         );
@@ -164,6 +168,10 @@ export default function App() {
               incidentId={selectedIncidentId}
               onBack={() => setCurrentScreen('responder-dashboard')}
               onNavPress={(screen) => setCurrentScreen(screen)}
+              onIncidentPress={(id) => {
+                setSelectedIncidentId(id);
+                setCurrentScreen('incident-details');
+              }}
             />
           );
         } else {
@@ -181,26 +189,6 @@ export default function App() {
             onNavPress={(screen) => setCurrentScreen(screen)}
             onLogout={() => setCurrentScreen('login')}
             onSave={() => alert('Profile Saved!')}
-          />
-        );
-      case 'reviewer-dashboard':
-        return (
-          <ReviewerDashboard
-            onNavPress={(screen) => setCurrentScreen(screen)}
-            onIncidentPress={(id) => {
-              setSelectedIncidentId(id);
-              setCurrentScreen('incident-details');
-            }}
-          />
-        );
-      case 'responder-dashboard':
-        return (
-          <ResponderDashboard
-            onNavPress={(screen) => setCurrentScreen(screen)}
-            onIncidentPress={(id) => {
-              setSelectedIncidentId(id);
-              setCurrentScreen('incident-details');
-            }}
           />
         );
       case 'update-status':
@@ -270,14 +258,8 @@ export default function App() {
             onNavPress={(screen) => setCurrentScreen(screen)}
           />
         );
-
       default:
-        return (
-          <LoginScreen
-            onSignUp={() => setCurrentScreen('register')}
-            onLoginSuccess={() => { }} // Rely on useEffect for navigation
-          />
-        );
+        return <ScreenPlaceholder name={currentScreen} />;
     }
   };
 

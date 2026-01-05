@@ -3,11 +3,13 @@ import {
     StyleSheet,
     View,
     Text,
-    ScrollView,
-    TouchableOpacity,
     TextInput,
-    Image,
+    TouchableOpacity,
+    ScrollView,
+    FlatList,
     Platform,
+    Image,
+    Alert,
     ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -29,9 +31,13 @@ const AssignResponderScreen = ({ incidentId, onBack, onAssigned }) => {
     const filters = [
         { label: 'Available', icon: 'check-circle', value: 'Available' },
         { label: 'Nearby', icon: 'near-me', value: 'Nearby' },
-        { label: 'Electricians', icon: 'bolt', value: 'Electricians' },
-        { label: 'Security', icon: 'security', value: 'Security' },
     ];
+
+    // Add dynamic filters for specialized types
+    const uniqueTypes = [...new Set(responders.map(r => r.responderType).filter(Boolean))];
+    uniqueTypes.forEach(type => {
+        filters.push({ label: type + 's', icon: 'build', value: type });
+    });
 
     useEffect(() => {
         loadData();
@@ -74,10 +80,8 @@ const AssignResponderScreen = ({ incidentId, onBack, onAssigned }) => {
             filtered = filtered.filter(r => r.status === 'available');
         } else if (activeFilter === 'Nearby') {
             filtered = filtered.sort((a, b) => (a.distance || 999) - (b.distance || 999));
-        } else if (activeFilter === 'Electricians') {
-            filtered = filtered.filter(r => r.skills?.includes('Electrician'));
-        } else if (activeFilter === 'Security') {
-            filtered = filtered.filter(r => r.skills?.includes('Security'));
+        } else if (uniqueTypes.includes(activeFilter)) {
+            filtered = filtered.filter(r => r.responderType === activeFilter);
         }
 
         setFilteredResponders(filtered);
@@ -229,18 +233,18 @@ const AssignResponderScreen = ({ incidentId, onBack, onAssigned }) => {
                                         style={[styles.avatar, responder.status !== 'available' && styles.avatarDisabled]}
                                     />
                                     <View style={[styles.statusDot, { backgroundColor: getStatusColor(responder.status) }]} />
-                                </View>
+                                </View >
                                 <View style={styles.responderDetails}>
                                     <Text style={styles.responderName}>{responder.fullName}</Text>
                                     <Text style={styles.responderRole}>
-                                        {responder.role}
+                                        {responder.responderType || responder.role}
                                         {responder.distance !== undefined && (
                                             <Text style={styles.distanceText}> • <Text style={{ color: theme.colors.primary }}>{responder.distance} mi</Text></Text>
                                         )}
                                         {responder.status === 'busy' && <Text style={{ color: '#f59e0b' }}> • Busy</Text>}
                                     </Text>
                                 </View>
-                            </View>
+                            </View >
                             <View style={styles.selectionIndicator}>
                                 {selectedResponder?.id === responder.id ? (
                                     <View style={styles.selectedIndicator}>
@@ -250,31 +254,33 @@ const AssignResponderScreen = ({ incidentId, onBack, onAssigned }) => {
                                     <View style={styles.unselectedIndicator} />
                                 )}
                             </View>
-                        </TouchableOpacity>
+                        </TouchableOpacity >
                     ))}
-                </View>
-            </ScrollView>
+                </View >
+            </ScrollView >
 
             {/* Confirm Button */}
-            {selectedResponder && (
-                <View style={styles.bottomAction}>
-                    <TouchableOpacity
-                        style={styles.confirmBtn}
-                        onPress={handleConfirmAssignment}
-                        disabled={assigning}
-                    >
-                        {assigning ? (
-                            <ActivityIndicator size="small" color={theme.colors.background} />
-                        ) : (
-                            <>
-                                <Text style={styles.confirmText}>Confirm Assignment</Text>
-                                <MaterialIcons name="arrow-forward" size={20} color={theme.colors.background} />
-                            </>
-                        )}
-                    </TouchableOpacity>
-                </View>
-            )}
-        </SafeAreaView>
+            {
+                selectedResponder && (
+                    <View style={styles.bottomAction}>
+                        <TouchableOpacity
+                            style={styles.confirmBtn}
+                            onPress={handleConfirmAssignment}
+                            disabled={assigning}
+                        >
+                            {assigning ? (
+                                <ActivityIndicator size="small" color={theme.colors.background} />
+                            ) : (
+                                <>
+                                    <Text style={styles.confirmText}>Confirm Assignment</Text>
+                                    <MaterialIcons name="arrow-forward" size={20} color={theme.colors.background} />
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                )
+            }
+        </SafeAreaView >
     );
 };
 

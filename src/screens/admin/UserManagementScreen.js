@@ -7,9 +7,9 @@ import {
     TouchableOpacity,
     FlatList,
     Image,
-    SafeAreaView,
     Dimensions
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
