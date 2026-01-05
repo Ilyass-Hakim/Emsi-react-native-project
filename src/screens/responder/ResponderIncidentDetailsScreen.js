@@ -204,7 +204,7 @@ const ResponderIncidentDetailsScreen = ({ incidentId, onBack, onNavPress }) => {
                                 <Text style={styles.reporterName}>{incident.reporterName || 'Anonymous'}</Text>
                                 <Text style={styles.reporterRole}>Reporter • {incident.department || 'Staff'}</Text>
                             </View>
-                            <TouchableOpacity style={styles.chatBtn}>
+                            <TouchableOpacity style={styles.chatBtn} onPress={() => onNavPress('incident-messages')}>
                                 <MaterialIcons name="chat" size={18} color={theme.colors.text} />
                             </TouchableOpacity>
                         </View>

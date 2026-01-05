@@ -5,7 +5,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    FlatList,
+    ScrollView,
     KeyboardAvoidingView,
     Platform,
     ActivityIndicator,
@@ -299,8 +299,13 @@ const IncidentMessagesScreen = ({ incidentId, onBack, onNavPress }) => {
                     <>
                         <NavButton icon="dashboard" label="Dashboard" onPress={() => onNavPress('reviewer-dashboard')} />
                         <NavButton icon="assignment-late" label="Incidents" active onPress={() => onNavPress('incoming-incidents')} />
-                        <NavButton icon="assignment-ind" label="Assignments" onPress={() => { }} />
-                        <NavButton icon="bar-chart" label="Reports" onPress={() => { }} />
+                        <NavButton icon="assignment-ind" label="Assignments" onPress={() => onNavPress('assignments-list')} />
+                        <NavButton icon="bar-chart" label="Reports" onPress={() => onNavPress('reports')} />
+                    </>
+                ) : profile?.role === 'Responder' ? (
+                    <>
+                        <NavButton icon="assignment-ind" label="Assigned" active onPress={() => onNavPress('responder-dashboard')} />
+                        <NavButton icon="person" label="Profile" onPress={() => onNavPress('profile')} />
                     </>
                 ) : (
                     <>
